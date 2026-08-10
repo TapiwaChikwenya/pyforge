@@ -5,7 +5,7 @@
 # needed here: no pyspark, no JVM, no pandas, no scikit-learn, no duckdb.
 # Smaller image, smaller attack surface, faster deploys.
 fastapi==0.111.0
-uvicorn[standard]==0.30.1
+uvicorn[standard]==0.52.1
 pydantic==2.7.4
 psycopg2-binary==2.9.9     # per-user progress storage
 itsdangerous==2.2.0        # signed session cookies
