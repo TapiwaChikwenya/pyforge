@@ -14,6 +14,6 @@ psycopg2-binary==2.9.9
 pymongo==4.7.3
 redis==5.0.6
 # analytics & AI stages (in-app exercises)
-duckdb==1.0.0
+duckdb==1.5.5
 scikit-learn==1.5.1
 scipy==1.13.1
