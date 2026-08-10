@@ -1,0 +1,13 @@
+# Your filled-in values (contains the OAuth secret)
+terraform.tfvars
+*.auto.tfvars
+
+# State — contains generated secrets in plain text
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+
+# Provider plugins and lock-adjacent noise
+.terraform/
+crash.log
+*.tfplan

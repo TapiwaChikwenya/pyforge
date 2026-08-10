@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyforge"
+version = "1.0.0"
+description = "Project-based Python → data engineering → AI learning platform"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "PyForge contributors" }]
+dependencies = [
+  "fastapi==0.111.0",
+  "uvicorn[standard]==0.30.1",
+  "pydantic==2.7.4",
+]
+
+[project.optional-dependencies]
+local = [
+  "numpy==1.26.4",
+  "pandas==2.2.2",
+  "pyspark==3.5.1",
+  "pyflakes==3.2.0",
+  "psycopg2-binary==2.9.9",
+  "pymongo==4.7.3",
+  "redis==5.0.6",
+  "duckdb==1.0.0",
+  "scikit-learn==1.5.1",
+  "scipy==1.13.1",
+]
+hosted = [
+  "psycopg2-binary==2.9.9",
+  "itsdangerous==2.2.0",
+  "httpx==0.27.0",
+]
+dev = [
+  "pytest==8.3.3",
+  "httpx==0.27.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["app", "tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

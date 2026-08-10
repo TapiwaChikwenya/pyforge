@@ -1,0 +1,209 @@
+# =============================================================================
+# PyForge — one-command learning stack
+#
+#   Base stack:                docker compose up -d
+#   + databases (SQL/NoSQL/ETL/AI stages):
+#                              docker compose --profile db up -d
+#   + Spark cluster:           docker compose --profile db --profile spark up -d
+#   + Airflow (full stack):    docker compose --profile db --profile spark --profile airflow up -d
+#
+# The app's Environment tab always shows the exact command for your current
+# project. Everything is preconfigured. No manual scripts, ever. See RUNBOOK.md.
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------- learning app
+  app:
+    build: ./app
+    container_name: pyforge-app
+    ports:
+      - "8000:8000"                    # UI: http://localhost:8000
+    volumes:
+      - app-data:/app/data             # progress survives restarts
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/healthz').read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------- jupyterlab
+  jupyter:
+    build: ./jupyter                   # pyspark-notebook + DB clients (see jupyter/Dockerfile)
+    container_name: pyforge-jupyter
+    ports:
+      - "8888:8888"                    # UI: http://localhost:8888
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    # No token for painless local use (do NOT expose this port publicly)
+    command: start-notebook.py --IdentityProvider.token='' --ServerApp.password=''
+    volumes:
+      - ./workspace:/home/jovyan/work  # your project files
+      - ./workspace:/workspace         # same files at the cluster-visible path
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8888/api >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------- databases
+  # The reusable data layer: a real Postgres warehouse (with pgvector for the
+  # AI stage), MongoDB as a document source, Redis for caching/streaming.
+  # Seed data loads automatically on first start — see databases/.
+  warehouse:
+    image: pgvector/pgvector:pg16
+    container_name: pyforge-warehouse
+    profiles: ["db"]
+    environment:
+      - POSTGRES_USER=pyforge
+      - POSTGRES_PASSWORD=pyforge
+      - POSTGRES_DB=warehouse
+    ports:
+      - "5432:5432"
+    volumes:
+      - warehouse-data:/var/lib/postgresql/data
+      - ./databases/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pyforge -d warehouse"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    container_name: pyforge-mongo
+    profiles: ["db"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./databases/mongo-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: pyforge-redis
+    profiles: ["db"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------- spark cluster
+  # Tag matches pyspark==3.5.1 in app/requirements.txt (3.5.1 patch line).
+  spark-master:
+    image: apache/spark:3.5.1
+    container_name: pyforge-spark-master
+    profiles: ["spark"]
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+    ports:
+      - "8080:8080"                    # Spark master UI
+      - "7077:7077"                    # cluster endpoint spark://spark-master:7077
+    volumes:
+      - ./workspace:/workspace
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080'"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+
+  spark-worker-1:
+    image: apache/spark:3.5.1
+    container_name: pyforge-spark-worker-1
+    profiles: ["spark"]
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2g
+    depends_on:
+      - spark-master
+    volumes:
+      - ./workspace:/workspace
+    restart: unless-stopped
+
+  spark-worker-2:
+    image: apache/spark:3.5.1
+    container_name: pyforge-spark-worker-2
+    profiles: ["spark"]
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2g
+    depends_on:
+      - spark-master
+    volumes:
+      - ./workspace:/workspace
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------- airflow
+  airflow-db:
+    image: postgres:16-alpine
+    container_name: pyforge-airflow-db
+    profiles: ["airflow"]
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - airflow-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  airflow:
+    build: ./airflow
+    container_name: pyforge-airflow
+    profiles: ["airflow"]
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=true
+      # first-run admin user (created automatically by the entry command)
+      - _AIRFLOW_ADMIN_USER=admin
+      - _AIRFLOW_ADMIN_PASSWORD=admin
+    ports:
+      - "8085:8080"                    # Airflow UI: http://localhost:8085
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags   # save a DAG file -> it appears in the UI
+      - ./workspace:/workspace             # shared data with Spark & Jupyter
+    command: >
+      bash -c "airflow db migrate &&
+               airflow users create --username $${_AIRFLOW_ADMIN_USER} --password $${_AIRFLOW_ADMIN_PASSWORD}
+                 --firstname Py --lastname Forge --role Admin --email admin@example.com || true &&
+               (airflow scheduler &) &&
+               exec airflow webserver"
+    restart: unless-stopped
+
+volumes:
+  app-data:
+  airflow-db-data:
+  warehouse-data:
+  mongo-data:

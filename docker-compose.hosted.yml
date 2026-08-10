@@ -1,0 +1,80 @@
+# =============================================================================
+# PyForge — public hosted deployment.
+#
+#   cp .env.hosted.example .env.hosted   (fill it in — see DEPLOY.md)
+#   docker compose -f docker-compose.hosted.yml --env-file .env.hosted up -d
+#
+# Three containers: the app, a Postgres for user progress, and Caddy as the
+# TLS-terminating reverse proxy (certificates are issued and renewed
+# automatically). Nothing here executes learner code — that happens in the
+# visitor's browser.
+# =============================================================================
+
+services:
+
+  web:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.hosted
+    container_name: pyforge-web
+    restart: unless-stopped
+    environment:
+      - PYFORGE_MODE=hosted
+      - "BASE_URL=${BASE_URL:?set BASE_URL in .env.hosted}"
+      - "SECRET_KEY=${SECRET_KEY:?set SECRET_KEY - generate with openssl rand -hex 32}"
+      - "DATABASE_URL=postgresql://pyforge:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/pyforge"
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - COOKIE_SECURE=${COOKIE_SECURE:-true}
+      - ALLOW_ANONYMOUS=${ALLOW_ANONYMOUS:-true}
+      - TRUST_PROXY=${TRUST_PROXY:-true}
+      - "PYODIDE_INDEX_URL=${PYODIDE_INDEX_URL:-https://cdn.jsdelivr.net/pyodide/v0.28.3/full/}"
+      - RATE_LIMIT_WRITES_PER_MINUTE=${RATE_LIMIT_WRITES_PER_MINUTE:-120}
+    volumes:
+      - web-data:/app/data   # rate-limit + oauth-fallback sqlite
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8000"          # not published to the host — Caddy is the only way in
+
+  db:
+    image: postgres:16-alpine
+    container_name: pyforge-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=pyforge
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      - POSTGRES_DB=pyforge
+    volumes:
+      - pyforge-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pyforge -d pyforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No ports published: only the app talks to it.
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: pyforge-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Bare domain (pyforge.example.com) => automatic HTTPS via Let's Encrypt.
+      # Use ":80" instead while testing locally without a domain.
+      - SITE_ADDRESS=${SITE_ADDRESS:?set SITE_ADDRESS, e.g. pyforge.example.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data          # certificates live here — keep this volume
+      - caddy-config:/config
+    depends_on:
+      - web
+
+volumes:
+  pyforge-db:
+  web-data:
+  caddy-data:
+  caddy-config:

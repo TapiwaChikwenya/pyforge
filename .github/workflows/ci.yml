@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  app-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install hosted + test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r app/requirements-hosted.txt
+          pip install pytest==8.3.3 httpx==0.27.0
+      - name: Unit / API tests
+        env:
+          PYFORGE_MODE: local
+        run: pytest tests/test_app.py -q
+
+  exercise-harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install local exercise deps (skip heavy Spark in CI)
+        run: |
+          python -m pip install --upgrade pip
+          # Trim Spark/JVM from CI: exercise harness uses --skip-heavy
+          grep -v '^pyspark' app/requirements.txt > /tmp/req-ci.txt
+          pip install -r /tmp/req-ci.txt
+      - name: Reference solutions vs checks
+        run: python tests/test_exercises.py --skip-heavy
+
+  hosted-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install hosted deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r app/requirements-hosted.txt
+      - name: Boot hosted app and assert /api/run is gone
+        env:
+          PYFORGE_MODE: hosted
+          SECRET_KEY: ci-smoke-secret
+          ALLOW_ANONYMOUS: "true"
+        run: |
+          cd app
+          uvicorn main:app --host 127.0.0.1 --port 8000 &
+          pid=$!
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8000/healthz && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8000/healthz | tee /tmp/health.json
+          python -c "import json; d=json.load(open('/tmp/health.json')); assert d['mode']=='hosted'"
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8000/api/run -H 'content-type: application/json' -d '{}')
+          test "$code" = "404"
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8000/api/lint -H 'content-type: application/json' -d '{}')
+          test "$code" = "404"
+          kill $pid
+
+  terraform-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Static HCL checks
+        run: python infra/terraform/lint.py
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+      - name: terraform fmt / validate
+        working-directory: infra/terraform
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false
+          terraform validate

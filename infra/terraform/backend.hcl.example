@@ -1,0 +1,16 @@
+# Copy to backend.hcl (do not commit) and run:
+#   terraform init -backend-config=backend.hcl
+#
+# Create the bucket first (versioning + encryption recommended):
+#   aws s3 mb s3://YOUR-TFSTATE-BUCKET --region us-east-1
+#   aws s3api put-bucket-versioning --bucket YOUR-TFSTATE-BUCKET \
+#     --versioning-configuration Status=Enabled
+#   aws s3api put-bucket-encryption --bucket YOUR-TFSTATE-BUCKET \
+#     --server-side-encryption-configuration \
+#     '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+
+bucket       = "YOUR-TFSTATE-BUCKET"
+key          = "pyforge/terraform.tfstate"
+region       = "us-east-1"
+encrypt      = true
+use_lockfile = true

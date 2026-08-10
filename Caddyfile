@@ -1,0 +1,25 @@
+# Caddy reverse proxy for the hosted deployment.
+# A bare domain here means automatic HTTPS (certificate issuance + renewal).
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# The app is the only upstream; it never sees the internet directly.
+	reverse_proxy web:8000
+
+	header {
+		# Pyodide is fetched from the CDN and needs to run WebAssembly.
+		# 'wasm-unsafe-eval' is what allows the Python runtime to execute in the
+		# browser sandbox — it does NOT give the page access to your server.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self' https://cdn.jsdelivr.net https://pypi.org https://files.pythonhosted.org; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Pyodide compat harness</title></head>
+<body>
+<div id="status">loading…</div>
+<script src="/pyodide/pyodide.js"></script>
+<script>
+let pyodide = null;
+
+window.bootPyodide = async function () {
+  pyodide = await loadPyodide({ indexURL: '/pyodide/' });
+  document.getElementById('status').textContent = 'ready';
+  return pyodide.runPython('import sys; sys.version');
+};
+
+// Compose exactly like the server runner does, then execute in fresh globals.
+window.runExercise = async function (userCode, checkCode) {
+  const script =
+    '_USER_SOURCE = ' + JSON.stringify(userCode) + '\n' +
+    userCode + '\n\n# ---- checks ----\n' + checkCode;
+
+  let out = '';
+  pyodide.setStdout({ batched: (s) => { out += s + '\n'; } });
+  pyodide.setStderr({ batched: (s) => { out += s + '\n'; } });
+
+  try {
+    await pyodide.loadPackagesFromImports(script);
+  } catch (e) {
+    return { ok: false, out, err: 'package load: ' + e.message };
+  }
+
+  const globals = pyodide.globals.get('dict')();
+  try {
+    await pyodide.runPythonAsync(script, { globals });
+    return { ok: true, out, err: '' };
+  } catch (e) {
+    return { ok: false, out, err: String(e.message || e).split('\n').slice(-6).join('\n') };
+  } finally {
+    globals.destroy();
+  }
+};
+</script>
+</body>
+</html>

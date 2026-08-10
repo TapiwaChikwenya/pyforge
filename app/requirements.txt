@@ -1,0 +1,19 @@
+# PyForge app dependencies (pinned major versions for reproducible builds)
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+pydantic==2.7.4
+numpy==1.26.4
+pandas==2.2.2
+# pyspark powers the in-app Spark exercises (local mode; Java is in the image)
+# Keep in lockstep with apache/spark image tag in docker-compose.yml
+pyspark==3.5.1
+# live editor linting (/api/lint)
+pyflakes==3.2.0
+# database clients: in-app scratch code can reach the compose db services
+psycopg2-binary==2.9.9
+pymongo==4.7.3
+redis==5.0.6
+# analytics & AI stages (in-app exercises)
+duckdb==1.0.0
+scikit-learn==1.5.1
+scipy==1.13.1
