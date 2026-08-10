@@ -50,6 +50,22 @@ const Onboarding = {
   },
 };
 
+const ResumeState = {
+  KEY: 'pyforge_resume_v1',
+  save(partial) {
+    const prev = this.get() || {};
+    const next = Object.assign({}, prev, partial || {}, { at: new Date().toISOString() });
+    try { localStorage.setItem(this.KEY, JSON.stringify(next)); } catch (e) {}
+  },
+  get() {
+    try { return JSON.parse(localStorage.getItem(this.KEY)) || null; }
+    catch (e) { return null; }
+  },
+  clear() {
+    try { localStorage.removeItem(this.KEY); } catch (e) {}
+  },
+};
+
 function track(event, extra) {
   const body = Object.assign({ event }, extra || {});
   try {
@@ -82,34 +98,52 @@ function stackChip(tier) {
 }
 
 /* ---------- dashboard enhancements ---------- */
-function dashboardToolbarHtml(stats) {
-  const s = stats || {};
-  return `
-    <div class="dash-toolbar">
-      <button class="tool-btn primary" onclick="startFirstHour()">Start first hour ▸</button>
-      <button class="tool-btn" onclick="showReviewDesk()">Review desk</button>
-      <button class="tool-btn" onclick="showPortfolioDesk()">Portfolio</button>
-      <button class="tool-btn" onclick="showFrictionDesk()">Friction report</button>
-      <span class="tool-meta">${s.pct || 0}% path · ${s.exercises_done || 0}/${s.exercises_total || 0} exercises</span>
-    </div>`;
+function resolveResume(cur) {
+  const saved = ResumeState.get();
+  if (!saved || !saved.project_id || !cur) return null;
+  const proj = (cur.projects || []).find(p => p.id === saved.project_id);
+  if (!proj) return null;
+  let exerciseTitle = null;
+  if (saved.exercise_id) {
+    const ex = (proj.exercises || []).find(e => e.id === saved.exercise_id);
+    exerciseTitle = (ex && ex.title) || saved.exercise_id;
+  }
+  return {
+    project_id: proj.id,
+    exercise_id: saved.exercise_id || null,
+    project_title: proj.title,
+    exercise_title: exerciseTitle,
+  };
 }
 
-function maybeShowOnboarding(firstHour) {
-  if (Onboarding.done() || !firstHour) return '';
+function dashboardHeroCtaHtml(cur) {
+  const resume = resolveResume(cur);
+  const fh = cur && cur.first_hour;
+  const stats = (cur && cur.stats) || {};
+  const primary = resume
+    ? `<button type="button" class="cta-primary" onclick="resumeLearning()">Resume ${escapeHtml(resume.project_title)}${resume.exercise_title ? ' · ' + escapeHtml(resume.exercise_title) : ''} ▸</button>`
+    : (fh && !Onboarding.done()
+      ? `<button type="button" class="cta-primary" onclick="startFirstHour()">Start first hour ▸</button>`
+      : `<button type="button" class="cta-primary" onclick="startFirstHour()">Start first hour ▸</button>`);
+  const secondary = resume && fh
+    ? `<button type="button" class="cta-secondary" onclick="startFirstHour()">First hour</button>`
+    : `<button type="button" class="cta-secondary" onclick="showReviewDesk()">Review desk</button>`;
+
   return `
-    <div class="onboard" id="onboard-card">
-      <div>
-        <div class="onboard-kicker">First hour</div>
-        <h3>${firstHour.title}</h3>
-        <p>${firstHour.blurb}</p>
-        <p class="onboard-meta">~${firstHour.est_minutes} min · ${stackChip(firstHour.stack_tier)}
-          · only <code>${firstHour.compose}</code></p>
-      </div>
-      <div class="onboard-actions">
-        <button class="run" onclick="startFirstHour()">Begin Task Forge ▸</button>
-        <button class="reset" onclick="dismissOnboarding()">Not now</button>
-      </div>
-    </div>`;
+    <div class="cta-row">
+      ${primary}
+      ${secondary}
+      <button type="button" class="cta-secondary" onclick="showPortfolioDesk()">Portfolio</button>
+      <details class="more-tools">
+        <summary>More</summary>
+        <div class="more-panel">
+          <button type="button" onclick="showReviewDesk()">Review desk</button>
+          <button type="button" onclick="startFirstHour()">Restart first hour</button>
+          <button type="button" onclick="showFrictionDesk()">Friction report</button>
+        </div>
+      </details>
+    </div>
+    <p class="tool-meta" style="margin-top:12px">${stats.pct || 0}% path · ${stats.exercises_done || 0}/${stats.exercises_total || 0} exercises</p>`;
 }
 
 function dismissOnboarding() {
@@ -118,34 +152,41 @@ function dismissOnboarding() {
   if (el) el.remove();
 }
 
-async function startFirstHour() {
-  const fh = (curriculum && curriculum.first_hour) || await api.get('/api/onboarding');
-  Onboarding.complete();
-  track('onboarding_start', { project_id: fh.project_id, exercise_id: fh.exercise_id });
-  await showProject(fh.project_id);
+async function openExerciseInProject(pid, eid) {
+  await showProject(pid);
   switchTab('exercises');
-  const ex = document.getElementById('ex-' + fh.exercise_id);
+  if (!eid) return;
+  const ex = document.getElementById('ex-' + eid);
   if (ex) {
     document.querySelectorAll('.ex').forEach(n => n.classList.remove('open'));
     ex.classList.add('open');
+    const ed = editors && editors[eid];
+    if (ed) setTimeout(() => ed.refresh(), 0);
     ex.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
-function enhanceDashboardHtml(html) {
-  const fh = curriculum.first_hour;
-  const stats = curriculum.stats || {};
-  const inject = dashboardToolbarHtml(stats) + maybeShowOnboarding(fh);
-  return html.replace('<div class="hero">', inject + '<div class="hero">');
+async function resumeLearning() {
+  const resume = resolveResume(curriculum);
+  if (!resume) {
+    await startFirstHour();
+    return;
+  }
+  track('resume_open', { project_id: resume.project_id, exercise_id: resume.exercise_id });
+  await openExerciseInProject(resume.project_id, resume.exercise_id);
 }
 
-function enhanceProjectCards(html) {
-  // Add stack tier chips into project cards from curriculum.projects
-  if (!curriculum) return html;
-  const byId = Object.fromEntries(curriculum.projects.map(p => [p.id, p]));
-  return html.replace(/onclick="showProject\('([^']+)'\)"/g, (m, pid) => {
-    return m; // keep handler; chips added via stage render patch in app.js
-  });
+async function startFirstHour() {
+  const fh = (curriculum && curriculum.first_hour) || await api.get('/api/onboarding');
+  Onboarding.complete();
+  track('onboarding_start', { project_id: fh.project_id, exercise_id: fh.exercise_id });
+  ResumeState.save({ project_id: fh.project_id, exercise_id: fh.exercise_id });
+  await openExerciseInProject(fh.project_id, fh.exercise_id);
+}
+
+/** @deprecated dashboard now builds CTA via dashboardHeroCtaHtml */
+function enhanceDashboardHtml(html) {
+  return html;
 }
 
 /* ---------- portfolio ---------- */
@@ -232,14 +273,7 @@ function completeReviewInterview(pid, idx) {
 }
 
 async function openReviewExercise(pid, eid) {
-  await showProject(pid);
-  switchTab('exercises');
-  const ex = document.getElementById('ex-' + eid);
-  if (ex) {
-    document.querySelectorAll('.ex').forEach(n => n.classList.remove('open'));
-    ex.classList.add('open');
-    ex.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  await openExerciseInProject(pid, eid);
 }
 
 /* ---------- friction analytics ---------- */
@@ -370,22 +404,20 @@ async function consumeDeepLink() {
   const eid = params.get('exercise');
   if (!pid) return false;
   history.replaceState({}, '', '/');
-  await showProject(pid);
-  if (eid) {
-    switchTab('exercises');
-    const ex = document.getElementById('ex-' + eid);
-    if (ex) {
-      document.querySelectorAll('.ex').forEach(n => n.classList.remove('open'));
-      ex.classList.add('open');
-    }
-  }
+  ResumeState.save({ project_id: pid, exercise_id: eid || null });
+  await openExerciseInProject(pid, eid);
   return true;
 }
 
 /* hooks used from app.js */
 window.PyForgeFeatures = {
-  ReviewState, track, mentorPanelHtml, solutionsSlotHtml, loadCommunitySolutions,
-  refreshMentor, localLaunchHtml, enhanceDashboardHtml, stackChip,
-  showPortfolioDesk, showReviewDesk, showFrictionDesk, startFirstHour,
-  consumeDeepLink, dashboardToolbarHtml, maybeShowOnboarding,
+  ReviewState, ResumeState, track, mentorPanelHtml, solutionsSlotHtml, loadCommunitySolutions,
+  refreshMentor, localLaunchHtml, enhanceDashboardHtml, dashboardHeroCtaHtml, stackChip,
+  showPortfolioDesk, showReviewDesk, showFrictionDesk, startFirstHour, resumeLearning,
+  consumeDeepLink, openExerciseInProject,
 };
+window.startFirstHour = startFirstHour;
+window.resumeLearning = resumeLearning;
+window.showReviewDesk = showReviewDesk;
+window.showPortfolioDesk = showPortfolioDesk;
+window.showFrictionDesk = showFrictionDesk;

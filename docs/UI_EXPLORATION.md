@@ -82,9 +82,20 @@ Not: equal-weight tool row + every stage expanded.
 - Marketing landing page separate from the learner app.
 - Full design-system package.
 
+## Implemented on this branch
+
+| Slice | Status |
+|-------|--------|
+| A — Dashboard first viewport + resume | Done — brand lockup, Resume / First hour CTA, stages 2+ collapsed, Friction under More |
+| B — Exercise focus mode | Done — lesson chrome in `<details>`; editor + Run first; mentor/solutions after result |
+| C — Typography + brand | Done — Syne + IBM Plex Mono; brand-forward header; chip diet (2 tech chips on cards) |
+| D — Mobile + a11y | Done — 720px breakpoint; tabs/cards keyboard + ARIA; `prefers-reduced-motion` |
+
 ## How to preview
 
 ```bash
-docker compose up -d app
+docker compose up -d --build app
 # http://localhost:8000
 ```
+
+Sample path: open dashboard → resume or start first hour → Exercises tab → confirm editor is above the collapsed lesson panel.
