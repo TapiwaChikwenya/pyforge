@@ -11,7 +11,7 @@ pyspark==3.5.1
 pyflakes==3.2.0
 # database clients: in-app scratch code can reach the compose db services
 psycopg2-binary==2.9.9
-pymongo==4.7.3
+pymongo==4.17.0
 redis==5.0.6
 # analytics & AI stages (in-app exercises)
 duckdb==1.0.0
