@@ -15,5 +15,5 @@ pymongo==4.7.3
 redis==5.0.6
 # analytics & AI stages (in-app exercises)
 duckdb==1.0.0
-scikit-learn==1.5.1
+scikit-learn==1.9.0
 scipy==1.13.1
