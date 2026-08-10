@@ -65,6 +65,32 @@ resource "aws_iam_role_policy" "read_secrets" {
   policy = data.aws_iam_policy_document.read_secrets.json
 }
 
+# Optional: upload daily Postgres dumps to S3 when backup_s3_bucket is set.
+data "aws_iam_policy_document" "backup_s3" {
+  count = var.backup_s3_bucket != "" ? 1 : 0
+
+  statement {
+    sid    = "PutOwnBackups"
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:AbortMultipartUpload",
+      "s3:ListBucket",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.backup_s3_bucket}",
+      "arn:aws:s3:::${var.backup_s3_bucket}/*",
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "backup_s3" {
+  count  = var.backup_s3_bucket != "" ? 1 : 0
+  name   = "${local.name}-backup-s3"
+  role   = aws_iam_role.instance.id
+  policy = data.aws_iam_policy_document.backup_s3[0].json
+}
+
 resource "aws_iam_instance_profile" "instance" {
   name = "${local.name}-instance"
   role = aws_iam_role.instance.name

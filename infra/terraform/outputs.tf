@@ -37,11 +37,11 @@ output "next_steps" {
   description = "What to do after the first apply."
   value       = <<-EOT
     1. Wait ~5 minutes for the instance to build and start the stack.
-       Watch it:  ${"aws ssm start-session --region ${var.aws_region} --target ${aws_instance.app.id}"}
-                  sudo tail -f /var/log/pyforge-bootstrap.log
+       Watch it:  terraform output -raw bootstrap_log_command
 
-    2. Open ${local.base_url} — the curriculum should load and Python runs in
-       your browser. Sign-in is off until you do step 3.
+    2. Open ${local.base_url} — curriculum loads; Python runs in the browser.
+       www.${var.domain_name} is included when subdomain is empty.
+       Sign-in is off until you do step 3.
 
     3. Create the GitHub OAuth app (github.com -> Settings -> Developer
        settings -> OAuth Apps):
@@ -49,10 +49,14 @@ output "next_steps" {
          Authorization callback URL: ${local.base_url}/auth/callback
        Put the client id and secret in terraform.tfvars, then:
          terraform apply
-         # then run the apply_config_command output to load them (~10 seconds,
-         # no rebuild — the database and everyone's progress stay put)
+         # then run: terraform output -raw apply_config_command
 
     4. Check it:  curl ${local.base_url}/healthz
                   curl -X POST ${local.base_url}/api/run -d '{}'   # must be 404
   EOT
+}
+
+output "data_volume_id" {
+  description = "Encrypted EBS volume that holds Docker/Postgres data (survives instance replace)."
+  value       = aws_ebs_volume.data.id
 }

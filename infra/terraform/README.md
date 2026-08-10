@@ -1,177 +1,149 @@
-# PyForge on AWS — Terraform
+# PyForge on AWS — deploy guide
 
-Creates everything needed to run the hosted app: a small VPC, one EC2 instance
-running the compose stack, an Elastic IP, the Route 53 record, secrets in SSM,
-an IAM role, and a budget alarm. About 30 resources, ~$16–20/month.
+Closest path to **one-click**: buy the domain in Route 53 → fill three values → `terraform apply` → wait ~5 minutes. GitHub sign-in is a deliberate second apply (OAuth needs your live URL).
 
-`terraform destroy` removes all of it.
+**Not zero-touch:** you still need AWS credentials and a Route 53 hosted zone. This is intentional — those can't be invented by Terraform.
 
 ---
 
-## Before you start
+## Prerequisites (once)
 
-1. **Register your domain in Route 53.** Buying it there automatically creates
-   the public hosted zone this configuration looks up — nothing else to
-   configure in DNS. (If the domain is registered elsewhere, create a hosted
-   zone for it in Route 53 and point the registrar's nameservers at it first.)
-2. **Push your PyForge repo somewhere public**, or plan to upload the folder
-   manually (see "Private repo" below).
-3. **Have AWS credentials configured** — `aws sts get-caller-identity` should
-   work.
-4. **Install Terraform** (or OpenTofu — `tofu` is a drop-in replacement here).
+1. **AWS account** with credentials configured (`aws sts get-caller-identity` works).
+2. **Terraform ≥ 1.5** installed.
+3. **Domain in Route 53** — buy it there, or create a public hosted zone and point the registrar's NS records at it.
+4. **This repo pushed to a public GitHub URL** (default in the example: `https://github.com/TapiwaChikwenya/pyforge.git`).
+
+Optional: Session Manager plugin (for `shell_command` without SSH).
 
 ---
 
-## Deploy
+## Deploy (first apply)
+
+### Option A — helper script (Linux / macOS / Git Bash)
 
 ```bash
 cd infra/terraform
 cp terraform.tfvars.example terraform.tfvars
-# edit terraform.tfvars — domain_name and repo_url are the ones that matter
+# edit: domain_name, budget_alert_email  (repo_url already points at this repo)
+cd ../..
+chmod +x scripts/deploy_aws.sh
+./scripts/deploy_aws.sh            # or: ./scripts/deploy_aws.sh -auto-approve
+```
 
-# Remote state (recommended — state holds generated secrets):
-cp backend.hcl.example backend.hcl   # set bucket + region first
-terraform init -backend-config=backend.hcl
+### Option B — manual
 
-# Local-only experiment (no S3): terraform init -backend=false
+```bash
+cd infra/terraform
+cp terraform.tfvars.example terraform.tfvars
+# set domain_name, repo_url, budget_alert_email
 
-terraform plan          # read this; it should create ~30 resources
+terraform init
+terraform plan
 terraform apply
 ```
 
-Then wait about five minutes: the instance updates itself, installs Docker,
-clones your repo, builds the image and starts the stack. Watch it happen:
+Then wait ~5 minutes:
 
 ```bash
-# terraform output shell_command gives you this exact line
-aws ssm start-session --region us-east-1 --target i-0123456789abcdef0
+terraform output -raw shell_command
+# on the instance:
 sudo tail -f /var/log/pyforge-bootstrap.log
 ```
 
-Open `https://your-domain`. Caddy requests a Let's Encrypt certificate on the
-first request, which works because Terraform created the DNS record before you
-got there.
+Open `terraform output -raw site_url`. Smoke checks:
 
-### Turning on GitHub sign-in
+```bash
+curl "$(terraform output -raw site_url)/healthz"
+curl -X POST "$(terraform output -raw site_url)/api/run" -d '{}'   # must be 404
+```
 
-There's a deliberate chicken-and-egg here: GitHub needs your URL, and the URL
-doesn't exist until the first apply. So the first deploy runs **without**
-sign-in — the site is fully usable, with progress stored in each visitor's
-browser.
+`www.` is included automatically for apex domains (DNS + Caddy certificate).
 
-Once it's up:
+---
 
-1. github.com → Settings → Developer settings → OAuth Apps → New OAuth App
-   - Homepage URL: `https://your-domain`
-   - Authorization callback URL: `https://your-domain/auth/callback`
-     (`terraform output oauth_callback_url` prints this exactly — it must match
-     character for character, or sign-in fails)
-2. Put the client id and secret in `terraform.tfvars`
-3. `terraform apply` — this updates SSM, nothing is rebuilt
-4. Run `terraform output -raw apply_config_command` and execute it — the
-   instance rebuilds its config from SSM and restarts the app in ~10 seconds
+## Sign-in (second apply — required for cross-device progress)
 
-That last step is the pattern for **every** setting change (domain, sign-in
-policy, Pyodide URL): apply, then reconfigure. The instance is never replaced,
-so the database and everyone's progress stay put.
+1. GitHub → Settings → Developer settings → OAuth Apps → New  
+   - Homepage: `terraform output -raw site_url`  
+   - Callback: `terraform output -raw oauth_callback_url`
+2. Put `github_client_id` / `github_client_secret` in `terraform.tfvars`
+3. `terraform apply`
+4. Run `terraform output -raw apply_config_command` (reloads SSM, restarts app, **keeps the database**)
+
+---
+
+## What you get (~$16–20/month starting point)
+
+| Piece | Notes |
+|-------|--------|
+| VPC + public subnet + SG | 80/443 open; SSH closed by default |
+| `t4g.small` EC2 + EIP | Amazon Linux 2023, IMDSv2 |
+| Route 53 A (+ www) | Points at the EIP |
+| SSM secrets | Generated `SECRET_KEY` + DB password |
+| Hosted Compose stack | App + Postgres + Caddy TLS |
+| Extra encrypted EBS | Docker volumes / Postgres — survives instance replace |
+| Daily backups | Local disk; set `backup_s3_bucket` for offsite |
+| Budget alarm | Emails at 80% / forecast overspend |
+
+`terraform destroy` removes it (including the data volume).
+
+---
+
+## Remote state (recommended after first success)
+
+Local state is the default so `terraform init` is non-interactive. State holds secrets.
+
+```bash
+./scripts/bootstrap_tf_state.sh my-pyforge-tfstate us-east-1
+# then uncomment backend "s3" {} in versions.tf
+cd infra/terraform
+terraform init -migrate-state -backend-config=backend.hcl
+```
 
 ---
 
 ## Day-to-day
 
 ```bash
-terraform output                  # all the URLs and helper commands
-terraform output -raw shell_command   # shell without SSH or an open port
-
-# deploy new application code
-aws ssm send-command --instance-ids <id> --document-name AWS-RunShellScript \
-  --parameters 'commands=["cd /opt/pyforge && git pull && systemctl restart pyforge"]'
-
-# back up learner progress (also runs daily via /etc/cron.d/pyforge-backup)
-aws ssm start-session --target <id>
-sudo APP_DIR=/opt/pyforge /opt/pyforge/scripts/backup_postgres.sh
-# optional: export S3_BACKUP_URI=s3://your-bucket/pyforge/db/
+terraform output
+terraform output -raw shell_command
+terraform output -raw apply_config_command   # after OAuth / settings changes
 ```
 
----
-
-## What gets created
-
-| | |
-|---|---|
-| Networking | VPC 10.20.0.0/16, one public subnet, internet gateway, route table |
-| Security group | 80 and 443 open; 22 only if you set `ssh_ingress_cidr` |
-| Compute | 1 × `t4g.small` (Graviton), encrypted 20 GB gp3 root, IMDSv2 required |
-| Address | Elastic IP + A record (plus `www` when using the bare domain) |
-| Secrets | SSM SecureString parameters under `/pyforge/<environment>/` |
-| Identity | Instance role: Session Manager + read its own parameters. No access keys |
-| Cost control | Budget alarm at 80% actual and 100% forecast spend |
-
-Postgres runs as a container on the instance, on an encrypted volume. That's
-the right trade at this size; move it to RDS when you want managed backups and
-point-in-time recovery (see AWS.md).
+Changing `repo_url` / `repo_branch` replaces the instance (intentional). The **data EBS** is re-attached so Postgres progress survives. Root disk content does not.
 
 ---
 
-## A note about state
-
-`terraform.tfstate` contains the generated `SECRET_KEY` and database password
-in plain text — this is true of any Terraform configuration that generates
-secrets. Treat the file as sensitive: it's git-ignored here. Production
-deploys should use the S3 backend (`backend.hcl.example`) so state is
-encrypted, versioned, and locked.
-
-Both generated secrets have `ignore_changes` set, so re-running apply never
-rotates them by accident — rotating the signing key would sign everyone out,
-and rotating the database password after the volume exists would lock the app
-out of its own data.
-
----
-
-## Private repo
-
-`user_data` clones over public HTTPS. For a private repo, either:
-
-- leave `repo_url = ""`, apply, then upload the folder yourself
-  (`aws s3 cp`, or `scp` if you enabled SSH) into `/opt/pyforge` and run
-  `sudo systemctl start pyforge`; or
-- bake a deploy key into SSM and add a `git config` step to `user_data.sh`.
-
----
-
-## Checks before you call it done
+## Validating without spending money
 
 ```bash
-curl https://your-domain/healthz                  # {"ok":true,"mode":"hosted",...}
-curl -X POST https://your-domain/api/run -d '{}'  # 404 — no execution endpoint exists
+cd infra/terraform
+pip install python-hcl2
+python lint.py
+terraform init -backend=false
+terraform validate
+# plan needs real AWS creds + a real hosted zone for domain_name
 ```
-
-Then sign in, tick an exercise, and sign in on a second device to confirm
-progress follows the account.
 
 ---
 
-## Validating changes without AWS
+## Troubleshooting
 
-`lint.py` parses every `.tf` file, checks that all variable / local / resource /
-data references resolve, and verifies the `user_data.sh` template contract
-(placeholders passed in, bash variables correctly escaped):
-
-```bash
-pip install python-hcl2 && python3 lint.py
-```
-
-It's not a replacement for `terraform validate`, which also checks provider
-schemas — run both.
+| Symptom | Fix |
+|---------|-----|
+| Plan fails on Route 53 data source | Domain has no public hosted zone in this account |
+| Site never comes up | `bootstrap_log_command` output — almost always clone/DNS/compose |
+| www TLS error | Re-apply so `SITE_ADDRESS` includes www; wait for Caddy reload |
+| Signed out after apply | You rotated `SECRET_KEY` — don't; it has `ignore_changes` |
+| Budget not created | Empty/`@example.com` email with `monthly_budget_usd > 0` fails validation |
 
 ---
 
-## Teardown
+## Honest scope
 
-```bash
-terraform destroy
-```
-
-Removes everything including the database volume and all learner progress.
-Take a backup first if that matters. The Route 53 *hosted zone* and your domain
-registration are not managed here, so they survive — as they should.
+| One apply gets you | Still manual |
+|--------------------|--------------|
+| HTTPS site, curriculum, anonymous progress | Buying the domain |
+| No server-side code execution | AWS credentials on your machine |
+| Budget + backups wired | GitHub OAuth app (apply #2) |
+| Public repo auto-cloned | Private repo upload / deploy key |

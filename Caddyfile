@@ -1,5 +1,6 @@
 # Caddy reverse proxy for the hosted deployment.
-# A bare domain here means automatic HTTPS (certificate issuance + renewal).
+# SITE_ADDRESS may be a single host (learn.example.com) or a comma-separated
+# list (example.com, www.example.com) — Terraform sets this via SSM.
 
 {$SITE_ADDRESS} {
 	encode zstd gzip

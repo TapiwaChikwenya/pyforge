@@ -10,8 +10,12 @@ variable "domain_name" {
   type        = string
 
   validation {
-    condition     = length(trimspace(var.domain_name)) > 0 && !startswith(var.domain_name, "http")
-    error_message = "domain_name must be a bare domain like example.com — no scheme, no trailing slash."
+    condition = (
+      length(trimspace(var.domain_name)) > 0
+      && !startswith(var.domain_name, "http")
+      && !contains(["example.com", "example.org", "example.net", "your-domain.com"], var.domain_name)
+    )
+    error_message = "domain_name must be your real bare domain (e.g. mypyforge.com) — no scheme, no example.com placeholders."
   }
 }
 
@@ -63,9 +67,21 @@ variable "root_volume_gb" {
 # --- application ------------------------------------------------------------
 
 variable "repo_url" {
-  description = "Public git URL of your PyForge repo, cloned on boot. Leave empty to install Docker only and upload the code yourself."
+  description = "Public git URL of your PyForge repo, cloned on boot. Required for one-click deploy (leave empty only if you will upload code manually)."
   type        = string
   default     = ""
+
+  validation {
+    condition = (
+      var.repo_url == ""
+      || (
+        startswith(var.repo_url, "https://")
+        && !strcontains(var.repo_url, "your-username")
+        && endswith(var.repo_url, ".git")
+      )
+    )
+    error_message = "repo_url must be empty (manual upload) or a real https://…/*.git URL — not the your-username placeholder."
+  }
 }
 
 variable "repo_branch" {
@@ -119,4 +135,28 @@ variable "budget_alert_email" {
   description = "Where budget alerts go. Required if monthly_budget_usd > 0."
   type        = string
   default     = ""
+
+  validation {
+    condition = (
+      var.monthly_budget_usd == 0
+      || (
+        length(var.budget_alert_email) > 3
+        && strcontains(var.budget_alert_email, "@")
+        && !endswith(var.budget_alert_email, "@example.com")
+      )
+    )
+    error_message = "Set budget_alert_email to a real inbox, or set monthly_budget_usd = 0 to skip the budget alarm."
+  }
+}
+
+variable "backup_s3_bucket" {
+  description = "Optional S3 bucket name for daily Postgres dumps. Empty = local disk backups only on the instance."
+  type        = string
+  default     = ""
+}
+
+variable "data_volume_gb" {
+  description = "Extra encrypted EBS volume for Docker volumes (Postgres data). Survives instance replacement when repo_url changes."
+  type        = number
+  default     = 20
 }

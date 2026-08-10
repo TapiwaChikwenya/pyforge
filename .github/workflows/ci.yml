@@ -85,7 +85,10 @@ jobs:
         with:
           python-version: "3.11"
       - name: Static HCL checks
-        run: python infra/terraform/lint.py
+        working-directory: infra/terraform
+        run: |
+          pip install python-hcl2
+          python lint.py
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.7

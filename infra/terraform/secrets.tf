@@ -63,14 +63,16 @@ resource "aws_ssm_parameter" "github_client_secret" {
 # Why this matters: none of these values pass through user_data, so changing
 # the domain or toggling sign-in does NOT replace the instance — which would
 # take the learner database with it. Change them, apply, then run the
-# `apply_new_secrets_command` output to restart the app. Adding a new setting
+# `apply_config_command` output to restart the app. Adding a new setting
 # later means adding a parameter here; user_data needs no edit.
 # ---------------------------------------------------------------------------
 
 resource "aws_ssm_parameter" "site_address" {
-  name  = "${local.ssm_prefix}/SITE_ADDRESS"
-  type  = "String"
-  value = local.fqdn
+  name = "${local.ssm_prefix}/SITE_ADDRESS"
+  type = "String"
+  # Caddy accepts comma-separated hosts. When serving the apex domain we also
+  # create a www DNS record (dns.tf) — both must be on the certificate.
+  value = var.subdomain == "" ? "${local.fqdn}, www.${var.domain_name}" : local.fqdn
 }
 
 resource "aws_ssm_parameter" "base_url" {
@@ -95,4 +97,10 @@ resource "aws_ssm_parameter" "pyodide_index_url" {
   name  = "${local.ssm_prefix}/PYODIDE_INDEX_URL"
   type  = "String"
   value = var.pyodide_index_url
+}
+
+resource "aws_ssm_parameter" "s3_backup_uri" {
+  name  = "${local.ssm_prefix}/S3_BACKUP_URI"
+  type  = "String"
+  value = var.backup_s3_bucket != "" ? "s3://${var.backup_s3_bucket}/pyforge/${var.environment}/" : ""
 }

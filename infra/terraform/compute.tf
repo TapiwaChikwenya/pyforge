@@ -50,6 +50,23 @@ resource "aws_instance" "app" {
   }
 }
 
+# Dedicated data disk for Docker volumes (Postgres progress). Attached as
+# /dev/sdf and mounted by user_data — survives instance replacement when
+# repo_url/branch change (root volume is still replaceable).
+resource "aws_ebs_volume" "data" {
+  availability_zone = aws_instance.app.availability_zone
+  size              = var.data_volume_gb
+  type              = "gp3"
+  encrypted         = true
+  tags              = { Name = "${local.name}-data" }
+}
+
+resource "aws_volume_attachment" "data" {
+  device_name = "/dev/sdf"
+  volume_id   = aws_ebs_volume.data.id
+  instance_id = aws_instance.app.id
+}
+
 # A fixed IP, so your DNS record stays correct across stop/start.
 resource "aws_eip" "app" {
   domain   = "vpc"

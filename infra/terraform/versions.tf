@@ -12,15 +12,16 @@ terraform {
     }
   }
 
-  # Remote state (recommended for anything beyond a laptop experiment).
-  # Partial config — values come from backend.hcl (see backend.hcl.example):
+  # Default: local state so `terraform init` is non-interactive (one-command
+  # first deploy). State contains generated secrets — gitignored here.
   #
-  #   cp backend.hcl.example backend.hcl   # edit bucket/region
-  #   terraform init -backend-config=backend.hcl
+  # For anything beyond a personal experiment, switch to S3:
+  #   1. Create a bucket (or run scripts/bootstrap_tf_state.sh)
+  #   2. Uncomment the backend block below
+  #   3. cp backend.hcl.example backend.hcl  # edit bucket/region
+  #   4. terraform init -migrate-state -backend-config=backend.hcl
   #
-  # Until you init with a backend config, Terraform uses local state.
-  # State contains generated secrets — see README §"A note about state".
-  backend "s3" {}
+  # backend "s3" {}
 }
 
 provider "aws" {
@@ -29,9 +30,9 @@ provider "aws" {
   # Every resource gets these tags, so you can find (and bill) them later.
   default_tags {
     tags = {
-      Project   = "pyforge"
+      Project     = "pyforge"
       Environment = var.environment
-      ManagedBy = "terraform"
+      ManagedBy   = "terraform"
     }
   }
 }

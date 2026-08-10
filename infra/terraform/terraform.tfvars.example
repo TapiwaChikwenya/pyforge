@@ -1,86 +1,73 @@
 # =============================================================================
-# PyForge on AWS — the only file you need to edit.
+# PyForge on AWS — edit this file, then run:
 #
-#   cp terraform.tfvars.example terraform.tfvars
-#   ...fill in the values below...
-#   terraform init && terraform apply
+#   cd infra/terraform
+#   cp terraform.tfvars.example terraform.tfvars   # if you haven't
+#   # set domain_name, repo_url, budget_alert_email below
+#   terraform init
+#   terraform apply
 #
-# terraform.tfvars is git-ignored: it holds your OAuth secret.
+# Or from the repo root (Linux/macOS/Git Bash):
+#   ./scripts/deploy_aws.sh
+#
+# terraform.tfvars is git-ignored (holds OAuth secrets later).
 # =============================================================================
 
 
 # --- 1. Your domain (REQUIRED) ----------------------------------------------
-# The domain you registered in Route 53. Buying it there automatically creates
-# the public hosted zone this configuration looks up, so there is nothing else
-# to set up in DNS.
-#
-# Bare domain only — no https://, no trailing slash.
-domain_name = "example.com"
+# Buy the domain IN Route 53 (or create a public hosted zone and point NS).
+# Bare domain only — no https://, no trailing slash, no example.com.
+domain_name = "YOUR-DOMAIN.com"
 
 # Which host to serve from:
-#   ""       -> example.com          (and www.example.com is pointed here too)
-#   "learn"  -> learn.example.com
+#   ""       -> YOUR-DOMAIN.com  (+ www.YOUR-DOMAIN.com)
+#   "learn"  -> learn.YOUR-DOMAIN.com
 subdomain = ""
 
 
 # --- 2. Where and how big ----------------------------------------------------
-# Pick the region closest to your learners.
 aws_region = "us-east-1"
 
-# t4g.small  = 2 vCPU / 2 GiB, Graviton (arm64), ~$12/month — recommended.
-# t4g.micro  = 2 vCPU / 1 GiB, ~$6/month — fine for a small audience.
-# If you switch to an x86 type (t3.small etc.) also set instance_architecture.
+# t4g.small  = 2 vCPU / 2 GiB, Graviton (arm64), ~$12–16/month — recommended.
 instance_type         = "t4g.small"
 instance_architecture = "arm64"
 
 root_volume_gb = 20
+data_volume_gb = 20   # encrypted EBS for Postgres Docker volumes
 
 
-# --- 3. Your code ------------------------------------------------------------
-# Public git URL of your PyForge repo. The instance clones this on boot.
-# Leave as "" to have Terraform install Docker only, then upload the folder
-# yourself to /opt/pyforge (see README).
-repo_url    = "https://github.com/your-username/pyforge.git"
+# --- 3. Your code (REQUIRED for one-click) ---------------------------------
+# Must be a public https://…/*.git URL. This repo's default:
+repo_url    = "https://github.com/TapiwaChikwenya/pyforge.git"
 repo_branch = "main"
 
 
-# --- 4. GitHub sign-in (fill in on the SECOND apply) -------------------------
-# Chicken and egg: GitHub needs your URL, and your URL doesn't exist until the
-# first apply. So leave these empty the first time — the site works fine
-# without sign-in, with progress stored in each visitor's browser.
-#
-# Then create the OAuth app at:
-#   github.com -> Settings -> Developer settings -> OAuth Apps -> New OAuth App
-#     Homepage URL:               https://<your domain>
-#     Authorization callback URL: https://<your domain>/auth/callback
-# ...paste the values here and run `terraform apply` again.
+# --- 4. GitHub sign-in (SECOND apply only) ----------------------------------
+# Leave empty on the first apply — the site works anonymously until you add OAuth.
+# After the site is up, create the OAuth app, paste values, terraform apply again,
+# then run: terraform output -raw apply_config_command
 github_client_id     = ""
 github_client_secret = ""
 
-# Let people use everything without an account (recommended for a public
-# resource). Sign-in then only adds cross-device progress.
 allow_anonymous = true
 
 
 # --- 5. Access ---------------------------------------------------------------
-# Leave null and no SSH port is opened at all — use AWS Session Manager for a
-# shell (the `shell_command` output gives you the exact command).
-# To allow SSH anyway, put YOUR address here, e.g. "203.0.113.4/32".
+# null = no SSH; use Session Manager (terraform output -raw shell_command).
 ssh_ingress_cidr = null
 
 
 # --- 6. Cost guard rail ------------------------------------------------------
-# Emails you at 80% of this monthly spend, and if the forecast would exceed it.
-# Set monthly_budget_usd = 0 to skip creating a budget.
+# Real email required when monthly_budget_usd > 0. Or set monthly_budget_usd = 0.
 monthly_budget_usd = 30
-budget_alert_email = "you@example.com"
+budget_alert_email = "YOUR-EMAIL@gmail.com"
 
 
-# --- 7. Advanced (defaults are fine) -----------------------------------------
-# Where browsers fetch the Python runtime. Change only if you self-host Pyodide
-# (see DEPLOY.md §7) or want to pin a different release.
+# --- 7. Optional offsite backups --------------------------------------------
+# Create an S3 bucket first, then set its name here (IAM + cron are wired).
+# backup_s3_bucket = "my-pyforge-backups"
+
+
+# --- 8. Advanced -------------------------------------------------------------
 # pyodide_index_url = "https://cdn.jsdelivr.net/pyodide/v0.28.3/full/"
-
-# Run more than one deployment (prod, staging) from the same account by giving
-# each a different environment — it namespaces resource names and secrets.
 # environment = "prod"

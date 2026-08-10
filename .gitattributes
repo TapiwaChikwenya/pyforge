@@ -1,0 +1,4 @@
+# Force LF for shell/bootstrap scripts so AL2023 cloud-init never sees CRLF.
+*.sh text eol=lf
+infra/terraform/user_data.sh text eol=lf
+Caddyfile text eol=lf

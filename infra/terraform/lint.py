@@ -12,11 +12,14 @@ compute.tf never passes in.
 """
 
 import glob
+import os
 import re
 import sys
+from pathlib import Path
 
 import hcl2
 
+HERE = Path(__file__).resolve().parent
 STRIP = str.maketrans("", "", '"')
 
 
@@ -25,9 +28,10 @@ def unquote(s):
 
 
 def main():
+    os.chdir(HERE)
     files = sorted(glob.glob("*.tf"))
     if not files:
-        print("no .tf files here — run this from infra/terraform/")
+        print(f"no .tf files in {HERE}")
         return 1
 
     parsed, problems = {}, []

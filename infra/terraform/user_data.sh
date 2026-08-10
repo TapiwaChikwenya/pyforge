@@ -23,6 +23,33 @@ dnf install -y docker git tar jq
 # The AWS CLI ships with AL2023; install it if that ever changes.
 command -v aws >/dev/null 2>&1 || dnf install -y awscli-2 || dnf install -y aws-cli
 
+# --- durable data volume (Postgres Docker volumes) --------------------------
+# Terraform attaches an encrypted EBS at /dev/sdf (may appear as /dev/nvme1n1).
+# Attachment can lag a few seconds behind first boot — wait for it.
+DATA_DEV=""
+for _i in $(seq 1 60); do
+  for candidate in /dev/sdf /dev/xvdf /dev/nvme1n1; do
+    if [ -b "$candidate" ]; then DATA_DEV="$candidate"; break 2; fi
+  done
+  sleep 2
+done
+if [ -n "$DATA_DEV" ]; then
+  echo "preparing data volume on $DATA_DEV"
+  if ! blkid "$DATA_DEV" >/dev/null 2>&1; then
+    mkfs.xfs -f "$DATA_DEV"
+  fi
+  mkdir -p /var/lib/docker/volumes
+  systemctl stop docker 2>/dev/null || true
+  if ! mountpoint -q /var/lib/docker/volumes; then
+    UUID="$(blkid -s UUID -o value "$DATA_DEV")"
+    grep -q "$UUID" /etc/fstab || echo "UUID=$UUID /var/lib/docker/volumes xfs defaults,nofail 0 2" >> /etc/fstab
+    mount /var/lib/docker/volumes
+  fi
+  echo "data volume mounted at /var/lib/docker/volumes"
+else
+  echo "WARNING: no data volume device found after 120s — Postgres will live on the root disk"
+fi
+
 systemctl enable --now docker
 usermod -aG docker ec2-user || true
 
@@ -134,7 +161,7 @@ if [ -f "$APP_DIR/scripts/backup_postgres.sh" ]; then
   cat > /etc/cron.d/pyforge-backup <<'CRON'
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-15 3 * * * root APP_DIR=/opt/pyforge /opt/pyforge/scripts/backup_postgres.sh >>/var/log/pyforge-backup.log 2>&1
+15 3 * * * root bash -lc 'set -a; [ -f /opt/pyforge/.env.hosted ] && . /opt/pyforge/.env.hosted; set +a; APP_DIR=/opt/pyforge /opt/pyforge/scripts/backup_postgres.sh' >>/var/log/pyforge-backup.log 2>&1
 CRON
   chmod 644 /etc/cron.d/pyforge-backup
   echo "installed daily backup cron (/etc/cron.d/pyforge-backup)"

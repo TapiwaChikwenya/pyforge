@@ -102,11 +102,11 @@ certainly not — and the laptop version has no queue.
 
 The architecture you already have, on a box. Start here.
 
-> **There is Terraform for exactly this** in `infra/terraform/` — VPC, instance,
-> Elastic IP, Route 53 record, SSM secrets, IAM role and a budget alarm, about
-> 30 resources. Fill in one file (`terraform.tfvars`) and `terraform apply`.
-> The manual steps below are what it automates, kept here so you know what it
-> is doing. See `infra/terraform/README.md`.
+> **There is Terraform for exactly this** in `infra/terraform/`. After you buy
+> the domain in Route 53: set `domain_name`, `repo_url`, and `budget_alert_email`
+> in `terraform.tfvars`, then `terraform apply` (or `./scripts/deploy_aws.sh`).
+> GitHub OAuth is a second apply once the URL exists. Full checklist:
+> `infra/terraform/README.md`. The manual steps below are what it automates.
 
 **Instance:** `t4g.small` (2 vCPU, 2 GiB, Graviton/ARM). Every compiled
 dependency in the hosted image publishes `aarch64` wheels — psycopg2-binary,
