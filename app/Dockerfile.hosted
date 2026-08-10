@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r requirements-hosted.txt
 # Only what the hosted app actually needs (no runner.py — never imported
 # in hosted mode, and leaving it out makes that guarantee physical).
 COPY config.py store.py auth.py main.py ratelimit.py progress_keys.py ./
+COPY mentor.py portfolio.py analytics_store.py review.py community_solutions.py ./
 COPY curriculum*.py enrichment*.py interviews_core.py ./
 COPY migrations ./migrations
 COPY static ./static

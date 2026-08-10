@@ -277,6 +277,7 @@ async function showDashboard() {
   const byId = Object.fromEntries(curriculum.projects.map(p => [p.id, p]));
   const nProjects = curriculum.projects.length;
   const nInterview = curriculum.projects.reduce((a, p) => a + (p.interview_total || 0), 0);
+  const F = window.PyForgeFeatures;
   let html = `
     <div class="hero">
       <h2>Your path to professional data engineering</h2>
@@ -294,6 +295,7 @@ async function showDashboard() {
       const total = p.exercises_total + p.milestones_total;
       const done = p.exercises_done + p.milestones_done;
       const pct = total ? Math.round(done / total * 100) : 0;
+      const tierChip = F ? F.stackChip(p.stack_tier) : '';
       html += `
         <div class="pcard ${pct === 100 ? 'done' : ''}" onclick="showProject('${p.id}')">
           <div class="num" style="--pct:${pct}"><span>${pct === 100 ? '✓' : p.num}</span></div>
@@ -302,7 +304,8 @@ async function showDashboard() {
             <div class="tag">${p.tagline}</div>
             <div class="chips">
               <span class="chip level">${p.level}</span>
-              ${p.tech.slice(0, 5).map(t => `<span class="chip">${t}</span>`).join('')}
+              ${tierChip}
+              ${p.tech.slice(0, 4).map(t => `<span class="chip">${t}</span>`).join('')}
             </div>
           </div>
           <div class="pmeta">
@@ -314,6 +317,7 @@ async function showDashboard() {
     }
     html += `</div>`;
   }
+  if (F && F.enhanceDashboardHtml) html = F.enhanceDashboardHtml(html);
   $main.innerHTML = html;
   // Always explain the hosted setup \u2014 including when sign-in is unavailable,
   // so nobody is left wondering where the login button went.
@@ -415,6 +419,13 @@ async function showProject(pid) {
     current.milestones_done = local.milestones[pid] || [];
   }
   const p = current.project;
+  if (window.PyForgeFeatures) {
+    window.PyForgeFeatures.track('project_open', { project_id: p.id });
+  }
+  const tier = p.stack_tier || 'light';
+  const stackNote = tier === 'light'
+    ? `Base stack only — <code>${p.environment.command}</code>`
+    : `This project needs a higher stack tier (${tier}). Start it when you reach the Environment tab: <code>${p.environment.command}</code>`;
   $main.innerHTML = `
     <button class="back" onclick="showDashboard()">← Back to the path</button>
     <div class="proj-head">
@@ -422,9 +433,11 @@ async function showProject(pid) {
       <div class="tag">${p.tagline}</div>
       <div class="chips" style="margin-top:10px">
         <span class="chip level">${p.level}</span>
+        ${window.PyForgeFeatures ? window.PyForgeFeatures.stackChip(tier) : ''}
         ${p.tech.map(t => `<span class="chip">${t}</span>`).join('')}
         <span class="chip">~${p.est_hours}h</span>
       </div>
+      <div class="stack-banner">${stackNote}</div>
     </div>
     <div class="tabs">
       <div class="tab active" data-tab="brief" onclick="switchTab('brief')">Brief</div>
@@ -485,17 +498,22 @@ function switchTab(name) {
 
   } else if (name === 'env') {
     const e = p.environment;
+    const tier = p.stack_tier || 'light';
     el.innerHTML = `<div class="panel">
-      <h4 style="margin-top:0">What this project needs running</h4>
+      <h4 style="margin-top:0">Progressive stack unlock</h4>
+      <p>Only start what this project needs — don't bring up Spark/Airflow early.</p>
+      <p>${window.PyForgeFeatures ? window.PyForgeFeatures.stackChip(tier) : tier}</p>
+      <h4>What must be running</h4>
       <p>${e.services.map(s => `• ${s}`).join('<br>')}</p>
-      <h4>One command, zero configuration</h4>
+      <h4>One command for this tier</h4>
       <code class="cmd">${e.command}</code>
+      <button class="reset" style="margin-left:8px" onclick="copyText('${e.command.replace(/'/g, "\\'")}').then(()=>alert('Copied'))">Copy</button>
       <div class="env-note">${e.note}</div>
-      <p style="margin-top:14px;color:var(--muted)">Everything else (ports, credentials, wiring) is
-      preconfigured — see <b>RUNBOOK.md</b> for the full operations guide.</p>
+      <p style="margin-top:14px;color:var(--muted)">See <b>RUNBOOK.md</b> for ports, credentials, and troubleshooting.</p>
     </div>`;
 
   } else if (name === 'exercises') {
+    const F = window.PyForgeFeatures;
     el.innerHTML = p.exercises.map((ex, i) => `
       <div class="ex ${current.exercises_passed[ex.id] ? 'passed' : ''} ${i === 0 ? 'open' : ''}" id="ex-${ex.id}">
         <div class="ex-head" onclick="toggleEx('${ex.id}')">
@@ -523,24 +541,17 @@ function switchTab(name) {
 
           <div class="instructions">${md(ex.instructions)}</div>
 
-          ${localOnly(ex) ? `
-          <div class="local-only">
-            <b>This one needs PyForge running on your own machine.</b> It starts a real
-            JVM Spark session, which no browser can do. Everything else in this project
-            runs right here — and ${ex.id.startsWith('fs') ? 'fs-1 and fs-2 build Spark\'s model in pure Python' : 'ss-1 and ss-2 cover the same ideas in pure Python'}.
-            <br>Clone the repo and start the base stack — that's all this exercise needs,
-            and it gets a Run button just like the others:
-            <br><code>docker compose up -d</code>
-            <br><span style="color:var(--muted)">(the Spark cluster profile is only needed for this project's milestones)</span>
-          </div>` : ''}
+          ${localOnly(ex) && F ? F.localLaunchHtml(ex) : ''}
 
-          <textarea id="code-${ex.id}"></textarea>
+          ${F ? F.mentorPanelHtml(ex) : ''}
+
+          ${localOnly(ex) ? '' : `<textarea id="code-${ex.id}"></textarea>`}
 
           <div class="ex-actions">
             ${localOnly(ex) ? '' :
               `<button class="run" onclick="runExercise('${ex.id}', ${!!ex.heavy})">Run &amp; Check ▸</button>`}
             ${ex.hints.length ? `<button class="hint-btn" id="hintbtn-${ex.id}" onclick="showHint('${ex.id}')">💡 Hint (0/${ex.hints.length})</button>` : ''}
-            <button class="reset" onclick="resetExercise('${ex.id}')">Reset</button>
+            ${localOnly(ex) ? '' : `<button class="reset" onclick="resetExercise('${ex.id}')">Reset</button>`}
             <div class="spinner" id="spin-${ex.id}"></div>
             <span class="heavy-note" id="note-${ex.id}"></span>
             ${(!localOnly(ex) && ex.packages && ex.packages.length && isHosted())
@@ -549,6 +560,7 @@ function switchTab(name) {
           </div>
           <div id="hints-${ex.id}"></div>
           <div class="result" id="res-${ex.id}"></div>
+          ${F ? F.solutionsSlotHtml(ex) : ''}
 
           ${ex.resources.length ? `
           <div class="resources">
@@ -557,14 +569,17 @@ function switchTab(name) {
           </div>` : ''}
         </div>
       </div>`).join('');
-    // Instantiate editors after the DOM exists
     for (const ex of p.exercises) {
+      if (localOnly(ex)) continue;
       const ta = document.getElementById('code-' + ex.id);
       ta.value = ex.starter_code;
       editors[ex.id] = makeEditor(ta);
       hintsShown[ex.id] = 0;
+      if (F) {
+        F.track('exercise_open', { exercise_id: ex.id, project_id: p.id });
+        if (current.exercises_passed[ex.id]) F.loadCommunitySolutions(ex.id);
+      }
     }
-    // Hosted: start the runtime in the background so the first Run feels instant
     if (isHosted() && p.exercises.some(e => !localOnly(e))) {
       ensurePyodide(msg => banner(msg)).then(() => banner('')).catch(() => {});
     }
@@ -619,8 +634,10 @@ async function runExercise(id, heavy) {
   const note = document.getElementById('note-' + id);
   const code = editors[id].getValue();
   const say = (msg) => { if (note) note.textContent = msg || ''; };
+  const F = window.PyForgeFeatures;
 
   btn.disabled = true; spin.style.display = 'block'; res.className = 'result';
+  if (F) F.track('exercise_run', { exercise_id: id, project_id: current.project.id });
 
   try {
     const out = isHosted()
@@ -634,15 +651,30 @@ async function runExercise(id, heavy) {
       current.exercises_passed[id] = true;
       document.getElementById('ex-' + id).classList.add('passed');
       await recordExercise(id, true);
+      if (F) {
+        F.ReviewState.markPassed(id);
+        F.track('exercise_pass', { exercise_id: id, project_id: current.project.id });
+        F.loadCommunitySolutions(id);
+      }
       confettiPulse();
     } else {
       res.className = 'result err';
       res.textContent = ((out.output ? out.output + '\n' : '') + (out.error || 'Failed')).trim();
+      if (F) {
+        F.ReviewState.bumpFail(id);
+        F.track('exercise_fail', { exercise_id: id, project_id: current.project.id });
+        F.refreshMentor(id);
+      }
     }
   } catch (e) {
     say('');
     res.className = 'result err';
     res.textContent = 'Could not run this exercise: ' + (e.message || e);
+    if (F) {
+      F.ReviewState.bumpFail(id);
+      F.track('exercise_fail', { exercise_id: id, project_id: current.project.id });
+      F.refreshMentor(id);
+    }
   }
   btn.disabled = false; spin.style.display = 'none';
 }
@@ -678,4 +710,8 @@ function confettiPulse() {
   refreshHeaderProgress();
 }
 
-showDashboard();
+(async function boot() {
+  const F = window.PyForgeFeatures;
+  if (F && await F.consumeDeepLink()) return;
+  await showDashboard();
+})();

@@ -17,6 +17,8 @@ from curriculum_ai import STAGE9_PROJECTS, STAGE10_PROJECTS
 from enrichment_core import ENRICHMENT_CORE
 from enrichment_bigdata import ENRICHMENT_BIGDATA
 from interviews_core import INTERVIEWS_CORE
+from mentor import build_mentor_debrief
+from community_solutions import COMMUNITY_SOLUTIONS
 
 # Enrichment layout (unified at assembly time):
 #   - Stages 1 / 7–8 early projects: overlay dicts in enrichment_*.py
@@ -24,6 +26,17 @@ from interviews_core import INTERVIEWS_CORE
 #     curriculum_* module next to the exercise definition
 # Both paths end up on the same exercise keys below (setdefault + update).
 _ENRICHMENT = {**ENRICHMENT_CORE, **ENRICHMENT_BIGDATA}
+
+# Progressive stack unlock — UI shows only the tier the project needs.
+def _stack_tier(env: dict) -> str:
+    cmd = env.get("command", "")
+    if "airflow" in cmd:
+        return "full"
+    if "spark" in cmd:
+        return "spark"
+    if "profile db" in cmd:
+        return "db"
+    return "light"
 
 # ----------------------------------------------------------------- lookups
 _by_id = {}
@@ -135,6 +148,7 @@ for stage in STAGES:
         num += 1
         p["num"] = num                                # renumber by path position
         p["environment"] = _ENV_BY_PROJECT[pid]
+        p["stack_tier"] = _stack_tier(p["environment"])
         p.setdefault("interview", [])
         if pid in INTERVIEWS_CORE:
             p["interview"] = INTERVIEWS_CORE[pid]
@@ -148,6 +162,19 @@ for stage in STAGES:
             ex.setdefault("resources", [])
             ex["runtime"] = "local" if ex["id"] in _LOCAL_ONLY else "browser"
             ex["packages"] = _packages_needed(ex)
+            ex["mentor_debrief"] = build_mentor_debrief(ex)
+            ex["has_community_solutions"] = ex["id"] in COMMUNITY_SOLUTIONS
+            # Deep-link payload for hosted runtime:local exercises
+            ex["local_launch"] = {
+                "compose": "docker compose up -d --build",
+                "project_id": pid,
+                "exercise_id": ex["id"],
+                "url_path": f"/?project={pid}&exercise={ex['id']}",
+                "note": (
+                    "Clone the repo, start the base stack, open this project, "
+                    "and run the exercise locally."
+                ),
+            }
         PROJECTS.append(p)
 
 PROJECTS_BY_ID = {p["id"]: p for p in PROJECTS}
@@ -156,3 +183,17 @@ PROJECTS_BY_ID = {p["id"]: p for p in PROJECTS}
 STAGE_LAYOUT = [
     {"title": s["title"], "project_ids": s["projects"]} for s in STAGES
 ]
+
+# First-hour onboarding target (Project 1, first exercise).
+FIRST_HOUR = {
+    "project_id": "task-forge",
+    "exercise_id": "tf-1",
+    "title": "Your first hour",
+    "blurb": (
+        "Start with Task Forge — a 10-minute win on dataclasses. "
+        "You don't need databases or Spark yet."
+    ),
+    "est_minutes": 10,
+    "stack_tier": "light",
+    "compose": "docker compose up -d",
+}

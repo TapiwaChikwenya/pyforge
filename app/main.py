@@ -34,9 +34,13 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 import config
-from curriculum import PROJECTS, PROJECTS_BY_ID, STAGE_LAYOUT
+from analytics_store import ALLOWED_EVENTS, get_analytics
+from community_solutions import solutions_for
+from curriculum import FIRST_HOUR, PROJECTS, PROJECTS_BY_ID, STAGE_LAYOUT
+from portfolio import build_certificate_html, build_portfolio_markdown, progress_stats
 from progress_keys import KNOWN_EXERCISE_IDS, sanitize_progress
 from ratelimit import RateLimiter, client_ip
+from review import build_review_queue
 from store import PostgresStore, build_store
 
 logging.basicConfig(
@@ -209,6 +213,17 @@ class MergeRequest(BaseModel):
     progress: dict[str, Any] = Field(default_factory=dict)
 
 
+class AnalyticsEvent(BaseModel):
+    event: str
+    exercise_id: str | None = None
+    project_id: str | None = None
+    meta: dict[str, Any] = Field(default_factory=dict)
+
+
+class ReviewRequest(BaseModel):
+    review_state: dict[str, Any] = Field(default_factory=dict)
+
+
 # ---------------------------------------------------------------- endpoints
 @app.get("/api/curriculum")
 def get_curriculum(request: Request) -> JSONResponse:
@@ -220,6 +235,8 @@ def get_curriculum(request: Request) -> JSONResponse:
             "id": p["id"], "num": p["num"], "title": p["title"],
             "tagline": p["tagline"], "level": p["level"], "tech": p["tech"],
             "est_hours": p["est_hours"],
+            "stack_tier": p.get("stack_tier", "light"),
+            "environment_command": p["environment"]["command"],
             "exercises_done": ex_done, "exercises_total": len(p["exercises"]),
             "exercise_ids": [e["id"] for e in p["exercises"]],
             "milestones_done": len(progress["milestones"].get(p["id"], [])),
@@ -237,6 +254,8 @@ def get_curriculum(request: Request) -> JSONResponse:
         "allow_anonymous": config.ALLOW_ANONYMOUS,
         # Hosted checkmarks are browser-verified; do not treat as proctored proof.
         "progress_honor_system": bool(config.HOSTED and config.PROGRESS_HONOR_SYSTEM),
+        "first_hour": FIRST_HOUR,
+        "stats": progress_stats(progress),
     }
     response = JSONResponse(body)
     # Progress is user-specific; only cache the anonymous case lightly.
@@ -320,6 +339,115 @@ def merge_progress(req: MergeRequest, request: Request) -> dict[str, Any]:
 @app.get("/api/progress")
 def get_progress(request: Request) -> dict[str, Any]:
     return _progress_for(request)
+
+
+@app.get("/api/onboarding")
+def onboarding() -> dict[str, Any]:
+    """First-hour guided start payload."""
+    return dict(FIRST_HOUR)
+
+
+def _portfolio_progress(request: Request, client_progress: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Prefer server progress; allow sanitized client progress for hosted anonymous."""
+    stored = _progress_for(request)
+    if stored.get("exercises") or stored.get("milestones"):
+        return stored
+    if client_progress and config.HOSTED and _user_id(request) is None:
+        return sanitize_progress(client_progress)
+    return stored
+
+
+@app.api_route("/api/portfolio", methods=["GET", "POST"])
+async def portfolio(request: Request) -> dict[str, Any]:
+    client_progress = None
+    if request.method == "POST":
+        try:
+            body = await request.json()
+            client_progress = (body or {}).get("progress")
+        except Exception:  # noqa: BLE001
+            client_progress = None
+    progress = _portfolio_progress(request, client_progress)
+    user = _current_user(request)
+    md = build_portfolio_markdown(progress, user)
+    return {
+        "markdown": md,
+        "stats": progress_stats(progress),
+        "honor_system": bool(config.HOSTED and config.PROGRESS_HONOR_SYSTEM),
+    }
+
+
+@app.get("/api/portfolio.md")
+def portfolio_download(request: Request) -> Response:
+    progress = _portfolio_progress(request)
+    md = build_portfolio_markdown(progress, _current_user(request))
+    return Response(
+        content=md,
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="pyforge-portfolio.md"'
+        },
+    )
+
+
+@app.get("/api/certificate")
+def certificate(request: Request) -> Response:
+    html = build_certificate_html(_portfolio_progress(request), _current_user(request))
+    return Response(content=html, media_type="text/html; charset=utf-8")
+
+
+@app.post("/api/analytics/event")
+def analytics_event(req: AnalyticsEvent, request: Request) -> dict[str, Any]:
+    if req.event not in ALLOWED_EVENTS:
+        raise HTTPException(400, "unknown event")
+    if req.exercise_id and req.exercise_id not in KNOWN_EXERCISE_IDS:
+        raise HTTPException(404, "unknown exercise")
+    if req.project_id and req.project_id not in PROJECTS_BY_ID:
+        raise HTTPException(404, "unknown project")
+    get_analytics().record(
+        req.event,
+        exercise_id=req.exercise_id,
+        project_id=req.project_id,
+        user_id=_user_id(request),
+        meta=req.meta,
+    )
+    return {"ok": True}
+
+
+@app.get("/api/analytics/friction")
+def analytics_friction(limit: int = 10) -> dict[str, Any]:
+    limit = max(1, min(limit, 25))
+    return {"items": get_analytics().friction_report(limit=limit)}
+
+
+@app.post("/api/review")
+def review_queue(req: ReviewRequest, request: Request) -> dict[str, Any]:
+    """Spaced review + interview drills. Client supplies fail/pass timestamps."""
+    items = build_review_queue(_progress_for(request), req.review_state)
+    return {"items": items, "count": len(items)}
+
+
+@app.get("/api/solutions/{exercise_id}")
+def community_solutions(exercise_id: str, request: Request) -> dict[str, Any]:
+    """Gated alternate solutions — only after the exercise is passed."""
+    if exercise_id not in KNOWN_EXERCISE_IDS:
+        raise HTTPException(404, "unknown exercise")
+    progress = _progress_for(request)
+    passed = bool(progress.get("exercises", {}).get(exercise_id))
+    # Anonymous hosted progress lives in localStorage; UI attests with ?passed=1.
+    anon_attest = (
+        config.HOSTED
+        and _user_id(request) is None
+        and request.query_params.get("passed") == "1"
+    )
+    if not passed and not anon_attest:
+        raise HTTPException(403, "pass this exercise to unlock community solutions")
+    sols = solutions_for(exercise_id)
+    get_analytics().record(
+        "solution_view",
+        exercise_id=exercise_id,
+        user_id=_user_id(request),
+    )
+    return {"exercise_id": exercise_id, "solutions": sols, "unlocked": True}
 
 
 # ------------------------------------------ local-only execution endpoints

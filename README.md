@@ -33,6 +33,7 @@ docker compose --profile db --profile spark --profile airflow up -d
 | [AWS.md](AWS.md) | AWS / ALB notes |
 | [TESTING.md](TESTING.md) | Manual + automated test rehearsal |
 | [docs/ENGINEERING.md](docs/ENGINEERING.md) | Security, migrations, rate limits, backups |
+| [docs/LEARNING_FEATURES.md](docs/LEARNING_FEATURES.md) | Onboarding, mentor, review, portfolio, analytics |
 | [infra/terraform/README.md](infra/terraform/README.md) | One-command AWS EC2 deploy |
 
 ## Develop / test
