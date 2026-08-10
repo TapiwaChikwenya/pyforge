@@ -8,7 +8,7 @@ pandas==2.2.2
 # Keep in lockstep with apache/spark image tag in docker-compose.yml
 pyspark==3.5.1
 # live editor linting (/api/lint)
-pyflakes==3.2.0
+pyflakes==3.4.0
 # database clients: in-app scratch code can reach the compose db services
 psycopg2-binary==2.9.9
 pymongo==4.7.3
