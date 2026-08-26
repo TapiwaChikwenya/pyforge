@@ -20,6 +20,8 @@ lake/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+.DS_Store
+xcuserdata/
 
 # self-hosted runtime (see DEPLOY.md §6)
 app/static/pyodide/

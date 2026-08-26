@@ -1,0 +1,463 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 71;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B00000000000000000000001 /* PyForgeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000001 /* PyForgeApp.swift */; };
+		B00000000000000000000002 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000002 /* RootView.swift */; };
+		B00000000000000000000003 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000003 /* AppModel.swift */; };
+		B00000000000000000000004 /* APIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000004 /* APIModels.swift */; };
+		B00000000000000000000005 /* PyForgeAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000005 /* PyForgeAPI.swift */; };
+		B00000000000000000000006 /* ForgeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000006 /* ForgeTheme.swift */; };
+		B00000000000000000000007 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000007 /* DashboardView.swift */; };
+		B00000000000000000000008 /* ProjectDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000008 /* ProjectDetailView.swift */; };
+		B00000000000000000000009 /* ExerciseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000009 /* ExerciseView.swift */; };
+		B0000000000000000000000A /* ServerSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000A /* ServerSettingsView.swift */; };
+		B0000000000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000B /* Assets.xcassets */; };
+		B0000000000000000000000C /* APIModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000D /* APIModelsTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D00000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A00000000000000000000001;
+			remoteInfo = PyForge;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		C00000000000000000000001 /* PyForgeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PyForgeApp.swift; sourceTree = "<group>"; };
+		C00000000000000000000002 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		C00000000000000000000003 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		C00000000000000000000004 /* APIModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIModels.swift; sourceTree = "<group>"; };
+		C00000000000000000000005 /* PyForgeAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PyForgeAPI.swift; sourceTree = "<group>"; };
+		C00000000000000000000006 /* ForgeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgeTheme.swift; sourceTree = "<group>"; };
+		C00000000000000000000007 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		C00000000000000000000008 /* ProjectDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailView.swift; sourceTree = "<group>"; };
+		C00000000000000000000009 /* ExerciseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseView.swift; sourceTree = "<group>"; };
+		C0000000000000000000000A /* ServerSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerSettingsView.swift; sourceTree = "<group>"; };
+		C0000000000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		C0000000000000000000000C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C0000000000000000000000D /* APIModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIModelsTests.swift; sourceTree = "<group>"; };
+		C0000000000000000000000E /* PyForge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PyForge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0000000000000000000000F /* PyForgeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PyForgeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		E00000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E00000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		F00000000000000000000000 = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000001 /* PyForge */,
+				F00000000000000000000008 /* PyForgeTests */,
+				F00000000000000000000009 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F00000000000000000000001 /* PyForge */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000002 /* App */,
+				F00000000000000000000003 /* Models */,
+				F00000000000000000000004 /* Networking */,
+				F00000000000000000000005 /* DesignSystem */,
+				F00000000000000000000006 /* Features */,
+				C0000000000000000000000B /* Assets.xcassets */,
+				C0000000000000000000000C /* Info.plist */,
+			);
+			path = PyForge;
+			sourceTree = "<group>";
+		};
+		F00000000000000000000002 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000001 /* PyForgeApp.swift */,
+				C00000000000000000000002 /* RootView.swift */,
+				C00000000000000000000003 /* AppModel.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		F00000000000000000000003 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000004 /* APIModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		F00000000000000000000004 /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000005 /* PyForgeAPI.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		F00000000000000000000005 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000006 /* ForgeTheme.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		F00000000000000000000006 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				F0000000000000000000000A /* Dashboard */,
+				F0000000000000000000000B /* Project */,
+				F0000000000000000000000C /* Exercise */,
+				F0000000000000000000000D /* Settings */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		F00000000000000000000008 /* PyForgeTests */ = {
+			isa = PBXGroup;
+			children = (
+				C0000000000000000000000D /* APIModelsTests.swift */,
+			);
+			path = PyForgeTests;
+			sourceTree = "<group>";
+		};
+		F00000000000000000000009 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C0000000000000000000000E /* PyForge.app */,
+				C0000000000000000000000F /* PyForgeTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		F0000000000000000000000A /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000007 /* DashboardView.swift */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		F0000000000000000000000B /* Project */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000008 /* ProjectDetailView.swift */,
+			);
+			path = Project;
+			sourceTree = "<group>";
+		};
+		F0000000000000000000000C /* Exercise */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000009 /* ExerciseView.swift */,
+			);
+			path = Exercise;
+			sourceTree = "<group>";
+		};
+		F0000000000000000000000D /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				C0000000000000000000000A /* ServerSettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A00000000000000000000001 /* PyForge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000011 /* Build configuration list for PBXNativeTarget "PyForge" */;
+			buildPhases = (
+				E00000000000000000000011 /* Sources */,
+				E00000000000000000000001 /* Frameworks */,
+				E00000000000000000000021 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PyForge;
+			productName = PyForge;
+			productReference = C0000000000000000000000E /* PyForge.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A00000000000000000000002 /* PyForgeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000012 /* Build configuration list for PBXNativeTarget "PyForgeTests" */;
+			buildPhases = (
+				E00000000000000000000012 /* Sources */,
+				E00000000000000000000002 /* Frameworks */,
+				E00000000000000000000022 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D00000000000000000000002 /* PBXTargetDependency */,
+			);
+			name = PyForgeTests;
+			productName = PyForgeTests;
+			productReference = C0000000000000000000000F /* PyForgeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A00000000000000000000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					A00000000000000000000001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					A00000000000000000000002 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = A00000000000000000000001;
+					};
+				};
+			};
+			buildConfigurationList = A00000000000000000000010 /* Build configuration list for PBXProject "PyForge" */;
+			compatibilityVersion = "Xcode 16.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = F00000000000000000000000;
+			productRefGroup = F00000000000000000000009 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A00000000000000000000001 /* PyForge */,
+				A00000000000000000000002 /* PyForgeTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E00000000000000000000021 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B0000000000000000000000B /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E00000000000000000000022 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E00000000000000000000011 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B00000000000000000000001 /* PyForgeApp.swift in Sources */,
+				B00000000000000000000002 /* RootView.swift in Sources */,
+				B00000000000000000000003 /* AppModel.swift in Sources */,
+				B00000000000000000000004 /* APIModels.swift in Sources */,
+				B00000000000000000000005 /* PyForgeAPI.swift in Sources */,
+				B00000000000000000000006 /* ForgeTheme.swift in Sources */,
+				B00000000000000000000007 /* DashboardView.swift in Sources */,
+				B00000000000000000000008 /* ProjectDetailView.swift in Sources */,
+				B00000000000000000000009 /* ExerciseView.swift in Sources */,
+				B0000000000000000000000A /* ServerSettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E00000000000000000000012 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B0000000000000000000000C /* APIModelsTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D00000000000000000000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A00000000000000000000001 /* PyForge */;
+			targetProxy = D00000000000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A00000000000000000000100 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A00000000000000000000101 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A00000000000000000000110 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = 82T8N3HLYD;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PyForge/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.freightbros.PyForge;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A00000000000000000000111 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 82T8N3HLYD;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PyForge/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.freightbros.PyForge;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A00000000000000000000120 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.PyForgeTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PyForge.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PyForge";
+			};
+			name = Debug;
+		};
+		A00000000000000000000121 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.PyForgeTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PyForge.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PyForge";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A00000000000000000000010 /* Build configuration list for PBXProject "PyForge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A00000000000000000000100 /* Debug */,
+				A00000000000000000000101 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A00000000000000000000011 /* Build configuration list for PBXNativeTarget "PyForge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A00000000000000000000110 /* Debug */,
+				A00000000000000000000111 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A00000000000000000000012 /* Build configuration list for PBXNativeTarget "PyForgeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A00000000000000000000120 /* Debug */,
+				A00000000000000000000121 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A00000000000000000000000 /* Project object */;
+}
