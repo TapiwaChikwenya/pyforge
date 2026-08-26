@@ -160,8 +160,9 @@ async function openExerciseInProject(pid, eid) {
   if (ex) {
     document.querySelectorAll('.ex').forEach(n => n.classList.remove('open'));
     ex.classList.add('open');
-    const ed = editors && editors[eid];
-    if (ed) setTimeout(() => ed.refresh(), 0);
+    // Build (or re-measure) this exercise's editor now that it is the visible
+    // one — see ensureEditor() in app.js for why it cannot happen while hidden.
+    requestAnimationFrame(() => window.ensureEditor && window.ensureEditor(eid));
     ex.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }

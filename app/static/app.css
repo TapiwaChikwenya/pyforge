@@ -303,13 +303,29 @@ code.cmd {
 .instructions { color: #c8d3e4; line-height: 1.6; margin-bottom: 12px; font-size: 14px; font-weight: 500; }
 .instructions p + p, .refresher-body p + p { margin-top: 10px; }
 .instructions strong { color: var(--accent-hot); }
-.ex-body pre, .panel pre {
+/* Markdown code styling — scoped to prose containers only.
+   NOT `.ex-body pre`: CodeMirror renders every editor line as a <pre> inside
+   .ex-body, so that selector styles the editor's internals too. It only looks
+   right today because CodeMirror's own stylesheet wins on specificity — which
+   stops being true the moment that CDN file is slow, blocked or version-bumped. */
+.instructions pre, .refresher-body pre, .local-only pre,
+.ivq-body pre, .ivq-answer pre, .lesson-body pre, .panel pre {
   background: #0a0e16; border: 1px solid var(--border); border-radius: 10px;
   padding: 12px 14px; overflow-x: auto; margin: 10px 0;
   font-family: var(--font-mono); font-size: 12.8px;
 }
-.ex-body code, .panel code { font-family: var(--font-mono); font-size: 12.8px; color: #9ee2ff; }
-.ex-body pre code, .panel pre code { color: #cfe3ff; }
+.instructions code, .refresher-body code, .ivq-body code,
+.ivq-answer code, .lesson-body code, .panel code {
+  font-family: var(--font-mono); font-size: 12.8px; color: #9ee2ff;
+}
+.instructions pre code, .refresher-body pre code, .ivq-body pre code,
+.ivq-answer pre code, .lesson-body pre code, .panel pre code { color: #cfe3ff; }
+
+/* Defensive: nothing may style the editor's internal line elements. */
+.CodeMirror pre.CodeMirror-line, .CodeMirror pre.CodeMirror-line-like {
+  background: transparent; border: 0; border-radius: 0;
+  padding: 0 4px; margin: 0; overflow: visible;
+}
 
 .refresher { border: 1px solid rgba(76,201,240,.3); border-radius: 10px; margin-bottom: 12px; background: rgba(76,201,240,.04); }
 .refresher-head {
@@ -409,10 +425,25 @@ button.reveal {
   background: #101724; color: #e7edf7; border: 1px solid var(--border); border-radius: 8px;
   font-family: var(--font-mono); font-size: 12.5px; z-index: 200;
 }
+/* CodeMirror positions the gutters absolutely and offsets the code by a gutter
+   width it measures once. Padding on .CodeMirror shifts that offset, and gutter
+   metrics in em change when the mono web font swaps in — both leave line numbers
+   sitting on top of the starter comments. Keep metrics px-based and let
+   makeEditor() re-measure after the font loads. */
 .CodeMirror {
-  border: 1px solid var(--border); border-radius: 10px; height: auto; min-height: 160px;
-  font-size: 13.5px; padding: 4px; font-family: var(--font-mono);
+  border: 1px solid var(--border); border-radius: 10px; height: auto;
+  font-size: 13.5px; font-family: var(--font-mono);
+  background: #0a0e16;
 }
+.CodeMirror-scroll { min-height: 170px; }
+.cm-s-material-darker.CodeMirror { background: #0a0e16; }
+.cm-s-material-darker .CodeMirror-gutters {
+  background: #0a0e16;
+  border-right: 1px solid var(--border);
+}
+.cm-s-material-darker .CodeMirror-linenumber { color: #5d6b80; }
+/* Starter hints are comments — keep them legible against the editor background */
+.cm-s-material-darker .cm-comment { color: #7f8ea6; }
 .ex-actions { display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
 button.run {
   background: linear-gradient(135deg, var(--accent), var(--accent-hot)); color: #140c04;

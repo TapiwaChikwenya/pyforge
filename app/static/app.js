@@ -51,16 +51,77 @@ function lintViaBackend(code, updateLinting, options, cm) {
     .catch(() => updateLinting(cm, []));   // backend unreachable: no markers
 }
 
+/* CodeMirror measures character and gutter widths when an editor is created and
+   caches them. The mono web font arrives later (font-display: swap), so those
+   measurements are taken with the fallback font and the gutter ends up narrower
+   than the digits it renders — line numbers then overlap the code. Re-measure
+   once the real font is available. */
+const monoFontReady = (document.fonts && document.fonts.load)
+  ? document.fonts.load('13.5px "IBM Plex Mono"').catch(() => {})
+  : Promise.resolve();
+
+/* Is CodeMirror's own stylesheet actually in effect? The CDN can serve the JS
+   but not the CSS (blocked, cached oddly, slow). CodeMirror's layout depends
+   entirely on that stylesheet, so without it the "editor" renders as a broken
+   pile of divs — a plain textarea is strictly better than that. */
+function codeMirrorUsable() {
+  if (!window.CodeMirror) return false;
+  const probe = document.createElement('div');
+  probe.className = 'CodeMirror';
+  probe.style.cssText = 'position:absolute;visibility:hidden;';
+  probe.innerHTML = '<div class="CodeMirror-gutters"></div>';
+  document.body.appendChild(probe);
+  const positioned = getComputedStyle(probe.querySelector('.CodeMirror-gutters')).position === 'absolute';
+  probe.remove();
+  return positioned;
+}
+
+/* Self-healing layout check.
+
+   CodeMirror caches the gutter width and offsets the code by it via
+   `sizer.marginLeft`. Anything that changes that width after the measurement —
+   a late web font, the lint gutter appearing on first lint, a container that
+   was hidden or zero-width at creation, a browser zoom change — leaves the code
+   rendered *underneath* the line numbers, which is exactly the reported bug.
+
+   Rather than try to enumerate every trigger, verify the outcome: the first
+   character of a line must start at or after the gutter's right edge. If it
+   does not, re-measure. A couple of spaced retries cover the slow-arriving
+   cases; after that we stop so a genuinely odd browser cannot spin. */
+function guardEditor(cm, tries = 4, delay = 250) {
+  const check = (left) => {
+    const wrap = cm.getWrapperElement();
+    if (!wrap.isConnected || !wrap.offsetParent) return schedule(left);  // still hidden
+    const line = wrap.querySelector('.CodeMirror-line');
+    const gutters = wrap.querySelector('.CodeMirror-gutters');
+    if (!line || !gutters) return schedule(left);
+    const L = line.getBoundingClientRect(), G = gutters.getBoundingClientRect();
+    // 1px of tolerance for sub-pixel rounding at fractional zoom levels.
+    if (L.left < G.right - 1) {
+      cm.refresh();
+      return schedule(left);
+    }
+  };
+  const schedule = (left) => { if (left > 0) setTimeout(() => check(left - 1), delay); };
+  schedule(tries);
+}
+
 function makeEditor(textarea) {
-  if (window.CodeMirror) {
+  if (codeMirrorUsable()) {
     // If the lint addon failed to load, the 'lint' option is simply inert and
     // the extra gutter stays empty — everything else keeps working.
-    return CodeMirror.fromTextArea(textarea, {
+    const cm = CodeMirror.fromTextArea(textarea, {
       mode: 'python', theme: 'material-darker', lineNumbers: true,
       indentUnit: 4, viewportMargin: Infinity,
       gutters: ['CodeMirror-lint-markers', 'CodeMirror-linenumbers'],
       lint: { async: true, getAnnotations: lintViaBackend, delay: 600 },
     });
+    // Re-measure once layout has settled, and again once the mono font is
+    // ready — both change gutter width and character metrics.
+    requestAnimationFrame(() => requestAnimationFrame(() => cm.refresh()));
+    monoFontReady.then(() => cm.refresh());
+    guardEditor(cm);
+    return cm;
   }
   // minimal CodeMirror-compatible shim around the raw textarea
   textarea.style.cssText = 'width:100%;min-height:160px;background:#0a0e16;color:#e7edf7;' +
@@ -70,6 +131,28 @@ function makeEditor(textarea) {
     setValue: (v) => { textarea.value = v; },
     refresh: () => {},
   };
+}
+
+/* Build an exercise's editor only once it is actually visible.
+   CodeMirror measures the gutter when it is created and caches the result. In a
+   `display: none` container every measurement is 0/near-0 — it records a 17px
+   gutter instead of 45px and sets sizer.marginLeft to 0, so the code renders
+   *underneath* the line numbers. Creating lazily (and refreshing on reveal) is
+   the only reliable fix. */
+function ensureEditor(id) {
+  if (editors[id]) {
+    editors[id].refresh();
+    // Re-arm the layout guard: this editor may have been measured while its
+    // container was hidden, and revealing it is exactly when that shows up.
+    if (editors[id].getWrapperElement) guardEditor(editors[id]);
+    return editors[id];
+  }
+  const ta = document.getElementById('code-' + id);
+  if (!ta) return null;                                   // local-only exercise
+  const ex = current && current.project.exercises.find(e => e.id === id);
+  if (ex && !ta.value) ta.value = ex.starter_code;
+  editors[id] = makeEditor(ta);
+  return editors[id];
 }
 
 const api = {
@@ -615,16 +698,35 @@ function switchTab(name) {
           ${F ? F.solutionsSlotHtml(ex) : ''}
         </div>
       </div>`).join('');
+    // Seed the textareas now, but build editors lazily — only an exercise that
+    // is actually on screen can be measured correctly (see ensureEditor).
     for (const ex of p.exercises) {
       if (localOnly(ex)) continue;
       const ta = document.getElementById('code-' + ex.id);
-      ta.value = ex.starter_code;
-      editors[ex.id] = makeEditor(ta);
+      if (ta) ta.value = ex.starter_code;
       hintsShown[ex.id] = 0;
       if (F) {
         F.track('exercise_open', { exercise_id: ex.id, project_id: p.id });
         if (current.exercises_passed[ex.id]) F.loadCommunitySolutions(ex.id);
       }
+    }
+    // The expanded exercise gets its editor on the next frame, once the browser
+    // has laid the new markup out. The rest are built when they are opened.
+    for (const node of document.querySelectorAll('.ex.open')) {
+      const id = node.id.replace('ex-', '');
+      requestAnimationFrame(() => ensureEditor(id));
+    }
+    // Safety net: re-measure any editor that (re)enters the viewport, covering
+    // reveals we did not route through toggleEx().
+    if (window.IntersectionObserver) {
+      const io = new IntersectionObserver(entries => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const id = e.target.id.replace('ex-', '');
+          if (editors[id]) editors[id].refresh();
+        }
+      });
+      document.querySelectorAll('.ex').forEach(node => io.observe(node));
     }
     // Resume points at the first open exercise (or first in list).
     if (F && F.ResumeState && p.exercises.length) {
@@ -670,17 +772,20 @@ function revealAnswer(i) {
 
 function toggleEx(id) {
   const node = document.getElementById('ex-' + id);
-  node.classList.toggle('open');
-  if (node.classList.contains('open') && window.PyForgeFeatures && window.PyForgeFeatures.ResumeState && current) {
+  const nowOpen = !node.classList.contains('open');
+  node.classList.toggle('open', nowOpen);
+  if (nowOpen && window.PyForgeFeatures && window.PyForgeFeatures.ResumeState && current) {
     window.PyForgeFeatures.ResumeState.save({ project_id: current.project.id, exercise_id: id });
   }
-  const ed = editors[id];
-  if (ed) setTimeout(() => ed.refresh(), 0);
+  // Create on first open, re-measure on later ones — on the next frame, so the
+  // browser has applied the class and the element is genuinely visible.
+  if (nowOpen) requestAnimationFrame(() => ensureEditor(id));
 }
 
 function resetExercise(id) {
   const ex = current.project.exercises.find(e => e.id === id);
-  editors[id].setValue(ex.starter_code);
+  const ed = ensureEditor(id);
+  if (ed) ed.setValue(ex.starter_code);
   const res = document.getElementById('res-' + id);
   res.className = 'result';
 }
@@ -690,7 +795,8 @@ async function runExercise(id, heavy) {
   const spin = document.getElementById('spin-' + id);
   const res = document.getElementById('res-' + id);
   const note = document.getElementById('note-' + id);
-  const code = editors[id].getValue();
+  const ed = ensureEditor(id);
+  const code = ed ? ed.getValue() : '';
   const say = (msg) => { if (note) note.textContent = msg || ''; };
   const F = window.PyForgeFeatures;
 
