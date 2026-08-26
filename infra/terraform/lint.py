@@ -112,6 +112,17 @@ def main():
     report("placeholders used but not passed in", placeholders - passed)
     report("values passed but unused in the script", passed - placeholders, fatal=False)
 
+    # The regex above only sees identifier-shaped placeholders. Anything else
+    # left unescaped — `${...}` inside a comment, say — is still an expression
+    # Terraform tries to evaluate, and templatefile() fails on it at plan time,
+    # long before the script would ever run on an instance.
+    malformed = {
+        m.group(1) for m in re.finditer(r"(?<!\$)\$\{([^}]*)\}", script)
+        if not re.fullmatch(r"[a-zA-Z_]\w*", m.group(1))
+    }
+    report("unescaped ${...} Terraform cannot evaluate (escape it as $${...})",
+           malformed)
+
     # bash variables must be escaped as $${VAR} so Terraform leaves them alone
     unescaped = re.findall(r"(?<!\$)\$\{([A-Z_]{2,})\}", script)
     report("bash vars that Terraform would try to interpolate", set(unescaped))

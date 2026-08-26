@@ -7,8 +7,9 @@
 # Everything is logged to /var/log/pyforge-bootstrap.log. If the site doesn't
 # come up, read that file first — it is almost always the answer.
 #
-# Note for readers: ${...} is substituted by Terraform when this file is
-# rendered; $${...} and plain $VAR are left alone for bash.
+# Note for readers: a $${name} placeholder is substituted by Terraform when this
+# file is rendered. Doubling the dollar sign escapes it, and plain $VAR is left
+# alone for bash.
 # ---------------------------------------------------------------------------
 set -euo pipefail
 exec > >(tee -a /var/log/pyforge-bootstrap.log) 2>&1

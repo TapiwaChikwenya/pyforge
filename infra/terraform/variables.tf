@@ -136,16 +136,20 @@ variable "budget_alert_email" {
   type        = string
   default     = ""
 
+  # Format only. A validation block may not reference another variable before
+  # Terraform 1.9, and this config supports >= 1.5, so the "budget requested
+  # means an email is required" rule lives in a precondition on the budget
+  # resource itself (budget.tf).
   validation {
     condition = (
-      var.monthly_budget_usd == 0
+      var.budget_alert_email == ""
       || (
         length(var.budget_alert_email) > 3
         && strcontains(var.budget_alert_email, "@")
         && !endswith(var.budget_alert_email, "@example.com")
       )
     )
-    error_message = "Set budget_alert_email to a real inbox, or set monthly_budget_usd = 0 to skip the budget alarm."
+    error_message = "budget_alert_email must be a real inbox — not empty-ish and not an @example.com placeholder. Leave it entirely empty only if monthly_budget_usd = 0."
   }
 }
 
