@@ -135,7 +135,8 @@ terraform validate
 | Site never comes up | `bootstrap_log_command` output — almost always clone/DNS/compose |
 | www TLS error | Re-apply so `SITE_ADDRESS` includes www; wait for Caddy reload |
 | Signed out after apply | You rotated `SECRET_KEY` — don't; it has `ignore_changes` |
-| Budget not created | Empty/`@example.com` email with `monthly_budget_usd > 0` fails validation |
+| Plan fails on a budget precondition | `monthly_budget_usd > 0` with an empty `budget_alert_email` — set a real inbox, or `monthly_budget_usd = 0` to skip the alarm |
+| Plan rejects `budget_alert_email` | It is `@example.com` or too short to be an inbox |
 
 ---
 

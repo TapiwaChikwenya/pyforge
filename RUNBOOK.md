@@ -178,6 +178,8 @@ docker compose exec mongo mongodump --db appdata --archive > mongo.archive
 | Symptom | Cause | Fix |
 |---|---|---|
 | A UI won't load right after `up` | services still starting | `docker compose ps` — wait for `running`; Airflow takes ~1–2 min on first boot |
+| Code editor text hidden behind the line numbers | stale `app.css`/`app.js` cached by the browser | hard-reload once (Ctrl/Cmd-Shift-R). The editor now re-measures itself and self-corrects, so this should not recur |
+| Editor looks like an unstyled pile of text | CodeMirror's CSS was blocked (ad-blocker, offline, corporate proxy) | expected — the app falls back to a plain textarea and everything still runs. Allow `cdnjs.cloudflare.com` to get syntax highlighting back |
 | "port is already allocated" | another program owns the port | change the **left** side of the mapping, e.g. `5433:5432` |
 | Postgres/Mongo has no seed data | volume already existed from an earlier run | see "Re-seeding a database" in §4 |
 | `psycopg2.OperationalError` from Jupyter | db profile not started, or wrong host | `docker compose --profile db up -d`; use host `warehouse` (not `localhost`) from inside containers |

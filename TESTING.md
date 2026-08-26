@@ -19,6 +19,8 @@ images to build.
 ```bash
 pip install -r app/requirements-hosted.txt pytest httpx
 pytest tests/test_app.py -q
+# frontend selector contract (no app import, runs in ~0.1s):
+pytest tests/test_frontend_assets.py -q
 # full exercise solvability (skip JVM Spark in CI):
 pip install -r app/requirements.txt   # local deps
 python tests/test_exercises.py --skip-heavy
@@ -65,6 +67,11 @@ Then open **http://localhost:8000** and confirm, in order:
 
 1. **Dashboard**: 10 stage headings, 34 project cards, "0% of the path".
 2. **Open Structly → Exercises**: refresher, objectives, task, code editor.
+   Check the editor's layout: the **first character of every line is fully
+   visible** (not tucked behind the line numbers), and the numbers sit in one
+   straight column. Then **click a second exercise's title to expand it** and
+   check the same thing — editors are built when an exercise opens, so this is
+   the case worth eyeballing.
 3. **Break something on purpose**: type `def two_sum(` and pause — a red marker
    should appear in the editor gutter (that's the live linter).
 4. **Solve it**: paste the one-pass solution, click **Run & Check** → green

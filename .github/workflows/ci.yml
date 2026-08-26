@@ -26,6 +26,10 @@ jobs:
         env:
           PYFORGE_MODE: local
         run: pytest tests/test_app.py -q
+      # Pure file parsing — no app import, so it shares this runner instead of
+      # paying for another one.
+      - name: Frontend selector contract
+        run: pytest tests/test_frontend_assets.py -q
 
   exercise-harness:
     runs-on: ubuntu-latest
