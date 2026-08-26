@@ -307,19 +307,22 @@ code.cmd {
    NOT `.ex-body pre`: CodeMirror renders every editor line as a <pre> inside
    .ex-body, so that selector styles the editor's internals too. It only looks
    right today because CodeMirror's own stylesheet wins on specificity — which
-   stops being true the moment that CDN file is slow, blocked or version-bumped. */
+   stops being true the moment that CDN file is slow, blocked or version-bumped.
+   Every container that renders markdown or code snippets must therefore be
+   listed here explicitly; .sol-card also lives inside .ex-body. */
 .instructions pre, .refresher-body pre, .local-only pre,
-.ivq-body pre, .ivq-answer pre, .lesson-body pre, .panel pre {
+.ivq-body pre, .ivq-answer pre, .lesson-body pre, .panel pre, .sol-card pre {
   background: #0a0e16; border: 1px solid var(--border); border-radius: 10px;
   padding: 12px 14px; overflow-x: auto; margin: 10px 0;
   font-family: var(--font-mono); font-size: 12.8px;
 }
 .instructions code, .refresher-body code, .ivq-body code,
-.ivq-answer code, .lesson-body code, .panel code {
+.ivq-answer code, .lesson-body code, .panel code, .sol-card code {
   font-family: var(--font-mono); font-size: 12.8px; color: #9ee2ff;
 }
 .instructions pre code, .refresher-body pre code, .ivq-body pre code,
-.ivq-answer pre code, .lesson-body pre code, .panel pre code { color: #cfe3ff; }
+.ivq-answer pre code, .lesson-body pre code, .panel pre code,
+.sol-card pre code { color: #cfe3ff; }
 
 /* Defensive: nothing may style the editor's internal line elements. */
 .CodeMirror pre.CodeMirror-line, .CodeMirror pre.CodeMirror-line-like {

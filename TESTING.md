@@ -19,6 +19,8 @@ images to build.
 ```bash
 pip install -r app/requirements-hosted.txt pytest httpx
 pytest tests/test_app.py -q
+# frontend selector contract (no app import, runs in ~0.1s):
+pytest tests/test_frontend_assets.py -q
 # full exercise solvability (skip JVM Spark in CI):
 pip install -r app/requirements.txt   # local deps
 python tests/test_exercises.py --skip-heavy
