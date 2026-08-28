@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 @pytest.fixture()
 def client(monkeypatch, tmp_path):
-    monkeypatch.setenv("PYFORGE_MODE", "local")
+    monkeypatch.setenv("DATAFORGED_MODE", "local")
     monkeypatch.setenv("RATE_LIMIT_WRITES_PER_MINUTE", "1000")
     for mod in list(sys.modules):
         if mod in {

@@ -1,4 +1,4 @@
-"""Run every PyForge exercise inside real Pyodide (headless Chromium) and report
+"""Run every DataForged exercise inside real Pyodide (headless Chromium) and report
 which ones work in the browser vs which need the local Docker runtime.
 
 Paths are relative to this directory — no hardcoded absolute machine paths.

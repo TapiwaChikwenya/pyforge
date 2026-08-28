@@ -30,7 +30,7 @@ provider "aws" {
   # Every resource gets these tags, so you can find (and bill) them later.
   default_tags {
     tags = {
-      Project     = "pyforge"
+      Project     = "dataforged"
       Environment = var.environment
       ManagedBy   = "terraform"
     }

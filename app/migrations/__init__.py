@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-log = logging.getLogger("pyforge.migrations")
+log = logging.getLogger("dataforged.migrations")
 
 MIGRATIONS_DIR = Path(__file__).parent
 

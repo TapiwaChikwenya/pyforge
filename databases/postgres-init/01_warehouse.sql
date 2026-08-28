@@ -1,5 +1,5 @@
 -- ============================================================================
--- PyForge warehouse seed — runs automatically on first start of the postgres
+-- DataForged warehouse seed — runs automatically on first start of the postgres
 -- container. A small but realistic e-commerce dataset, reused by the SQL, ETL,
 -- Spark and AI projects. Safe to reset with: docker compose down -v (db data
 -- lives in a volume).

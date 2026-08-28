@@ -12,7 +12,7 @@ from typing import Any
 
 import config
 
-log = logging.getLogger("pyforge.analytics")
+log = logging.getLogger("dataforged.analytics")
 
 ALLOWED_EVENTS = frozenset({
     "exercise_open", "exercise_run", "exercise_fail", "exercise_pass",

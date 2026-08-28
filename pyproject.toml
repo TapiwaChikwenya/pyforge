@@ -3,13 +3,13 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pyforge"
+name = "dataforged"
 version = "1.0.0"
 description = "Project-based Python → data engineering → AI learning platform"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "PyForge contributors" }]
+authors = [{ name = "DataForged contributors" }]
 dependencies = [
   "fastapi==0.111.0",
   "uvicorn[standard]==0.30.1",

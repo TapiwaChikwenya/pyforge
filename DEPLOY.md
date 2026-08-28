@@ -1,12 +1,12 @@
-# Deploying PyForge publicly
+# Deploying DataForged publicly
 
-How to put PyForge on the internet so other developers can use it — safely.
+How to put DataForged on the internet so other developers can use it — safely.
 
 ---
 
 ## 1. What changes when you host it
 
-PyForge runs in one of two modes, chosen by the `PYFORGE_MODE` environment
+DataForged runs in one of two modes, chosen by the `DATAFORGED_MODE` environment
 variable. The local Docker stack you already have is unaffected.
 
 | | `local` (default) | `hosted` |
@@ -55,9 +55,9 @@ visitor's browser. With it, progress follows them across devices.
 
 1. GitHub → Settings → Developer settings → **OAuth Apps** → *New OAuth App*
 2. Fill in:
-   - **Application name**: PyForge
-   - **Homepage URL**: `https://pyforge.example.com`
-   - **Authorization callback URL**: `https://pyforge.example.com/auth/callback`
+   - **Application name**: DataForged
+   - **Homepage URL**: `https://dataforged.example.com`
+   - **Authorization callback URL**: `https://dataforged.example.com/auth/callback`
      (must match `BASE_URL` exactly, including scheme — this is the single most
      common setup mistake)
 3. Generate a client secret, then put the client id and secret in `.env.hosted`.
@@ -74,7 +74,7 @@ only serves JSON and static files. Roughly $5–7/month.
 
 ```bash
 # on the server, with Docker installed and DNS A record pointing here
-git clone <your repo> pyforge && cd pyforge
+git clone <your repo> dataforged && cd dataforged
 
 cp .env.hosted.example .env.hosted
 nano .env.hosted                        # set SITE_ADDRESS, BASE_URL, secrets
@@ -102,7 +102,7 @@ git pull
 docker compose -f docker-compose.hosted.yml --env-file .env.hosted up -d --build web
 ```
 
-Progress lives in the `pyforge-db` volume and survives rebuilds.
+Progress lives in the `dataforged-db` volume and survives rebuilds.
 
 ### Backups
 
@@ -113,10 +113,10 @@ Manual:
 ./scripts/backup_postgres.sh
 # or:
 docker compose -f docker-compose.hosted.yml --env-file .env.hosted exec -T db \
-  pg_dump -U pyforge pyforge | gzip > pyforge-$(date +%F).sql.gz
+  pg_dump -U dataforged dataforged | gzip > dataforged-$(date +%F).sql.gz
 ```
 
-Set `S3_BACKUP_URI=s3://your-bucket/pyforge/db/` to also upload.
+Set `S3_BACKUP_URI=s3://your-bucket/dataforged/db/` to also upload.
 
 ---
 
@@ -135,7 +135,7 @@ works. Point the build at `app/Dockerfile.hosted` and set these environment
 variables:
 
 ```
-PYFORGE_MODE=hosted
+DATAFORGED_MODE=hosted
 BASE_URL=https://your-app.fly.dev
 SECRET_KEY=<openssl rand -hex 32>
 DATABASE_URL=<the managed Postgres connection string>

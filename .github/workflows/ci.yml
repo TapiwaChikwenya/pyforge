@@ -24,7 +24,7 @@ jobs:
           pip install pytest==8.3.3 httpx==0.27.0
       - name: Unit / API tests
         env:
-          PYFORGE_MODE: local
+          DATAFORGED_MODE: local
         run: pytest tests/test_app.py -q
       # Pure file parsing — no app import, so it shares this runner instead of
       # paying for another one.
@@ -62,7 +62,7 @@ jobs:
           pip install -r app/requirements-hosted.txt
       - name: Boot hosted app and assert /api/run is gone
         env:
-          PYFORGE_MODE: hosted
+          DATAFORGED_MODE: hosted
           SECRET_KEY: ci-smoke-secret
           ALLOW_ANONYMOUS: "true"
         run: |

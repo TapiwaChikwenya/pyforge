@@ -17,7 +17,7 @@ STAGE6_PROJECTS = [
         "est_hours": 9,
         "brief": (
             "Stop writing one-off scripts; build the small framework you'll reuse "
-            "for the rest of the course: pyforge_etl — extractors (Mongo "
+            "for the rest of the course: dataforged_etl — extractors (Mongo "
             "collections, REST APIs, CSV files), pure transform functions, "
             "loaders (Postgres upsert, parquet), wired together by a YAML/dict "
             "config instead of code changes. Then use it for real: reviews and "
@@ -25,7 +25,7 @@ STAGE6_PROJECTS = [
             "architecture question 'design an ETL system' answered in code."
         ),
         "milestones": [
-            "Design the interfaces: Extractor.extract() -> iterator of dicts; transform(record) -> record|None; Loader.load(records) -> count. Write them as small ABCs in workspace/pyforge_etl/.",
+            "Design the interfaces: Extractor.extract() -> iterator of dicts; transform(record) -> record|None; Loader.load(records) -> count. Write them as small ABCs in workspace/dataforged_etl/.",
             "Implement MongoExtractor (collection, query, batch cursor), CsvExtractor, and ApiExtractor (with ww-2 retries) — each yielding plain dicts.",
             "Implement PostgresUpsertLoader (executemany + ON CONFLICT, pw-3 batching) and ParquetLoader; both idempotent by construction.",
             "Build the Pipeline class: config dict {source, transforms, sink, batch_size} -> wired pipeline; run() streams extract→transform→load in batches and returns a run report (counts in/out/errors).",

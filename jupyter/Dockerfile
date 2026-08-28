@@ -1,5 +1,5 @@
 # JupyterLab with Spark (base image) + the database clients and DS/AI libraries
-# used across the PyForge curriculum — so notebooks never need manual installs.
+# used across the DataForged curriculum — so notebooks never need manual installs.
 FROM quay.io/jupyter/pyspark-notebook:spark-3.5.0
 
 RUN pip install --no-cache-dir \

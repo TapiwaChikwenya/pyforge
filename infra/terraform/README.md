@@ -1,4 +1,4 @@
-# PyForge on AWS — deploy guide
+# DataForged on AWS — deploy guide
 
 Closest path to **one-click**: buy the domain in Route 53 → fill three values → `terraform apply` → wait ~5 minutes. GitHub sign-in is a deliberate second apply (OAuth needs your live URL).
 
@@ -11,7 +11,7 @@ Closest path to **one-click**: buy the domain in Route 53 → fill three values 
 1. **AWS account** with credentials configured (`aws sts get-caller-identity` works).
 2. **Terraform ≥ 1.5** installed.
 3. **Domain in Route 53** — buy it there, or create a public hosted zone and point the registrar's NS records at it.
-4. **This repo pushed to a public GitHub URL** (default in the example: `https://github.com/TapiwaChikwenya/pyforge.git`).
+4. **This repo pushed to a public GitHub URL** (default in the example: `https://github.com/TapiwaChikwenya/data-forged.git`).
 
 Optional: Session Manager plugin (for `shell_command` without SSH).
 
@@ -47,7 +47,7 @@ Then wait ~5 minutes:
 ```bash
 terraform output -raw shell_command
 # on the instance:
-sudo tail -f /var/log/pyforge-bootstrap.log
+sudo tail -f /var/log/dataforged-bootstrap.log
 ```
 
 Open `terraform output -raw site_url`. Smoke checks:
@@ -94,7 +94,7 @@ curl -X POST "$(terraform output -raw site_url)/api/run" -d '{}'   # must be 404
 Local state is the default so `terraform init` is non-interactive. State holds secrets.
 
 ```bash
-./scripts/bootstrap_tf_state.sh my-pyforge-tfstate us-east-1
+./scripts/bootstrap_tf_state.sh my-dataforged-tfstate us-east-1
 # then uncomment backend "s3" {} in versions.tf
 cd infra/terraform
 terraform init -migrate-state -backend-config=backend.hcl

@@ -29,11 +29,11 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 import config
 
-log = logging.getLogger("pyforge.auth")
+log = logging.getLogger("dataforged.auth")
 router = APIRouter()
 
-_signer = URLSafeTimedSerializer(config.SECRET_KEY, salt="pyforge-session")
-_state_signer = URLSafeTimedSerializer(config.SECRET_KEY, salt="pyforge-oauth-state")
+_signer = URLSafeTimedSerializer(config.SECRET_KEY, salt="dataforged-session")
+_state_signer = URLSafeTimedSerializer(config.SECRET_KEY, salt="dataforged-oauth-state")
 
 GITHUB_AUTHORIZE = "https://github.com/login/oauth/authorize"
 GITHUB_TOKEN = "https://github.com/login/oauth/access_token"

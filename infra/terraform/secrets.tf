@@ -20,7 +20,7 @@ resource "random_password" "postgres" {
 
 resource "aws_ssm_parameter" "session_key" {
   name        = "${local.ssm_prefix}/SECRET_KEY"
-  description = "PyForge session cookie signing key"
+  description = "DataForged session cookie signing key"
   type        = "SecureString"
   value       = random_password.session_key.result
 
@@ -32,7 +32,7 @@ resource "aws_ssm_parameter" "session_key" {
 
 resource "aws_ssm_parameter" "postgres_password" {
   name        = "${local.ssm_prefix}/POSTGRES_PASSWORD"
-  description = "PyForge Postgres password"
+  description = "DataForged Postgres password"
   type        = "SecureString"
   value       = random_password.postgres.result
 
@@ -102,5 +102,5 @@ resource "aws_ssm_parameter" "pyodide_index_url" {
 resource "aws_ssm_parameter" "s3_backup_uri" {
   name  = "${local.ssm_prefix}/S3_BACKUP_URI"
   type  = "String"
-  value = var.backup_s3_bucket != "" ? "s3://${var.backup_s3_bucket}/pyforge/${var.environment}/" : ""
+  value = var.backup_s3_bucket != "" ? "s3://${var.backup_s3_bucket}/dataforged/${var.environment}/" : ""
 }

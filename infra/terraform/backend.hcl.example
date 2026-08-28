@@ -10,7 +10,7 @@
 #     '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
 
 bucket       = "YOUR-TFSTATE-BUCKET"
-key          = "pyforge/terraform.tfstate"
+key          = "dataforged/terraform.tfstate"
 region       = "us-east-1"
 encrypt      = true
 use_lockfile = true

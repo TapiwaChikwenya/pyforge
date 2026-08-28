@@ -9,7 +9,7 @@ Expert pass on the current SPA (`app/static/index.html`, `app.css`, `app.js`, `f
 The product flows (path → project tabs → exercises → interview) are clear and
 the new learning features (first hour, review, portfolio) are discoverable.
 The look still reads as a generic dark admin dashboard with Segoe UI, dense
-chips, and a long wall of project cards. That undercuts “PyForge” as a brand
+chips, and a long wall of project cards. That undercuts “DataForged” as a brand
 and makes the first session feel heavier than it is.
 
 ## What works
@@ -50,7 +50,7 @@ and makes the first session feel heavier than it is.
 ## North-star composition (dashboard)
 
 ```
-[ PyForge wordmark ]                    [ progress · account ]
+[ DataForged wordmark ]                    [ progress · account ]
 [ Resume: Task Forge · tf-1  ▸ ]   or   [ Start first hour ▸ ]
 [ Stage 1 preview — 4 projects ]
 [ Show full path ▾ ]

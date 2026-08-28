@@ -1,10 +1,10 @@
 #!/bin/bash
 # ---------------------------------------------------------------------------
-# PyForge bootstrap. Runs once, as root, on first boot.
+# DataForged bootstrap. Runs once, as root, on first boot.
 #
 #   install Docker -> clone the repo -> build .env.hosted from SSM -> compose up
 #
-# Everything is logged to /var/log/pyforge-bootstrap.log. If the site doesn't
+# Everything is logged to /var/log/dataforged-bootstrap.log. If the site doesn't
 # come up, read that file first — it is almost always the answer.
 #
 # Note for readers: a $${name} placeholder is substituted by Terraform when this
@@ -12,10 +12,10 @@
 # alone for bash.
 # ---------------------------------------------------------------------------
 set -euo pipefail
-exec > >(tee -a /var/log/pyforge-bootstrap.log) 2>&1
-echo "=== pyforge bootstrap starting $(date -Is) ==="
+exec > >(tee -a /var/log/dataforged-bootstrap.log) 2>&1
+echo "=== dataforged bootstrap starting $(date -Is) ==="
 
-APP_DIR=/opt/pyforge
+APP_DIR=/opt/dataforged
 
 # --- packages ---------------------------------------------------------------
 dnf update -y
@@ -80,15 +80,15 @@ fi
 # setting with Terraform (adding GitHub OAuth credentials, for example) — no
 # instance rebuild, no downtime beyond a container restart.
 #
-#   sudo /usr/local/bin/pyforge-reconfigure
+#   sudo /usr/local/bin/dataforged-reconfigure
 #
 # The parameter name becomes the variable name:
-#   /pyforge/prod/BASE_URL  ->  BASE_URL=...
+#   /dataforged/prod/BASE_URL  ->  BASE_URL=...
 # so adding a setting later means adding an SSM parameter; this never changes.
-cat > /usr/local/bin/pyforge-reconfigure <<'SCRIPT'
+cat > /usr/local/bin/dataforged-reconfigure <<'SCRIPT'
 #!/bin/bash
 set -euo pipefail
-APP_DIR=/opt/pyforge
+APP_DIR=/opt/dataforged
 
 umask 077
 aws ssm get-parameters-by-path \
@@ -112,17 +112,17 @@ for required in SECRET_KEY POSTGRES_PASSWORD BASE_URL SITE_ADDRESS; do
 done
 echo "configuration written: $(grep -c . "$APP_DIR/.env.hosted") settings"
 
-if systemctl is-enabled pyforge.service >/dev/null 2>&1; then
-  systemctl restart pyforge.service
-  echo "pyforge restarted"
+if systemctl is-enabled dataforged.service >/dev/null 2>&1; then
+  systemctl restart dataforged.service
+  echo "dataforged restarted"
 fi
 SCRIPT
-chmod 755 /usr/local/bin/pyforge-reconfigure
+chmod 755 /usr/local/bin/dataforged-reconfigure
 
 # --- service ----------------------------------------------------------------
-cat > /etc/systemd/system/pyforge.service <<'EOF'
+cat > /etc/systemd/system/dataforged.service <<'EOF'
 [Unit]
-Description=PyForge (docker compose)
+Description=DataForged (docker compose)
 Requires=docker.service
 After=docker.service network-online.target
 Wants=network-online.target
@@ -130,7 +130,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/opt/pyforge
+WorkingDirectory=/opt/dataforged
 ExecStart=/usr/bin/docker compose -f docker-compose.hosted.yml --env-file .env.hosted up -d --build
 ExecStop=/usr/bin/docker compose -f docker-compose.hosted.yml --env-file .env.hosted down
 TimeoutStartSec=1800
@@ -140,33 +140,33 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable pyforge.service
+systemctl enable dataforged.service
 
 # Write the config (service not started yet, so this just creates .env.hosted)
-/usr/local/bin/pyforge-reconfigure
+/usr/local/bin/dataforged-reconfigure
 
 if [ -f "$APP_DIR/docker-compose.hosted.yml" ]; then
-  systemctl start pyforge.service
-  echo "=== pyforge started. Caddy requests its certificate on the first request. ==="
+  systemctl start dataforged.service
+  echo "=== dataforged started. Caddy requests its certificate on the first request. ==="
 else
   echo "=== no docker-compose.hosted.yml yet — upload the code to $APP_DIR, then:"
-  echo "===   sudo systemctl start pyforge"
+  echo "===   sudo systemctl start dataforged"
 fi
 
 # --- automated Postgres backups --------------------------------------------
-# Daily dump to /var/backups/pyforge. Set S3_BACKUP_URI in the environment
+# Daily dump to /var/backups/dataforged. Set S3_BACKUP_URI in the environment
 # (or edit the cron line) to also push gzipped dumps to S3.
-mkdir -p /var/backups/pyforge
+mkdir -p /var/backups/dataforged
 if [ -f "$APP_DIR/scripts/backup_postgres.sh" ]; then
   chmod +x "$APP_DIR/scripts/backup_postgres.sh"
-  cat > /etc/cron.d/pyforge-backup <<'CRON'
+  cat > /etc/cron.d/dataforged-backup <<'CRON'
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-15 3 * * * root bash -lc 'set -a; [ -f /opt/pyforge/.env.hosted ] && . /opt/pyforge/.env.hosted; set +a; APP_DIR=/opt/pyforge /opt/pyforge/scripts/backup_postgres.sh' >>/var/log/pyforge-backup.log 2>&1
+15 3 * * * root bash -lc 'set -a; [ -f /opt/dataforged/.env.hosted ] && . /opt/dataforged/.env.hosted; set +a; APP_DIR=/opt/dataforged /opt/dataforged/scripts/backup_postgres.sh' >>/var/log/dataforged-backup.log 2>&1
 CRON
-  chmod 644 /etc/cron.d/pyforge-backup
-  echo "installed daily backup cron (/etc/cron.d/pyforge-backup)"
+  chmod 644 /etc/cron.d/dataforged-backup
+  echo "installed daily backup cron (/etc/cron.d/dataforged-backup)"
 fi
 
-touch /opt/pyforge-bootstrap-complete
-echo "=== pyforge bootstrap finished $(date -Is) ==="
+touch /opt/dataforged-bootstrap-complete
+echo "=== dataforged bootstrap finished $(date -Is) ==="

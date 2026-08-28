@@ -1,5 +1,5 @@
 // ============================================================================
-// PyForge Mongo seed — runs on first start of the mongo container.
+// DataForged Mongo seed — runs on first start of the mongo container.
 // Two collections used as ETL *sources* (DocStore, Pipeline Blueprint,
 // Airflow Pro) and for document-modeling exercises.
 // ============================================================================
@@ -49,6 +49,6 @@ db.events.insertMany(events);
 db.events.createIndex({ ts: 1 });
 db.events.createIndex({ customer_id: 1, ts: -1 });
 
-print('PyForge mongo seed complete: ' +
+print('DataForged mongo seed complete: ' +
       db.reviews.countDocuments() + ' reviews, ' +
       db.events.countDocuments() + ' events');

@@ -5,14 +5,14 @@
 # ---------------------------------------------------------------------------
 
 locals {
-  name = "pyforge-${var.environment}"
+  name = "dataforged-${var.environment}"
 
-  # Host the site answers on: pyforge.dev, or learn.pyforge.dev if a subdomain
+  # Host the site answers on: dataforged.dev, or learn.dataforged.dev if a subdomain
   # was given.
   fqdn     = var.subdomain == "" ? var.domain_name : "${var.subdomain}.${var.domain_name}"
   base_url = "https://${local.fqdn}"
 
-  ssm_prefix = "/pyforge/${var.environment}"
+  ssm_prefix = "/dataforged/${var.environment}"
 }
 
 data "aws_availability_zones" "available" {
@@ -64,7 +64,7 @@ resource "aws_route_table_association" "public" {
 
 resource "aws_security_group" "web" {
   name        = "${local.name}-web"
-  description = "PyForge web ingress"
+  description = "DataForged web ingress"
   vpc_id      = aws_vpc.this.id
 
   tags = { Name = "${local.name}-web" }

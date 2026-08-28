@@ -1,5 +1,5 @@
 output "site_url" {
-  description = "Where PyForge will be served once Caddy has its certificate."
+  description = "Where DataForged will be served once Caddy has its certificate."
   value       = local.base_url
 }
 
@@ -25,12 +25,12 @@ output "shell_command" {
 
 output "bootstrap_log_command" {
   description = "First thing to run if the site does not come up."
-  value       = "aws ssm start-session --region ${var.aws_region} --target ${aws_instance.app.id} --document-name AWS-StartInteractiveCommand --parameters command='sudo tail -n 200 /var/log/pyforge-bootstrap.log'"
+  value       = "aws ssm start-session --region ${var.aws_region} --target ${aws_instance.app.id} --document-name AWS-StartInteractiveCommand --parameters command='sudo tail -n 200 /var/log/dataforged-bootstrap.log'"
 }
 
 output "apply_config_command" {
   description = "Run after any `terraform apply` that changed settings (GitHub OAuth, domain, sign-in policy). Rebuilds the app config from SSM and restarts — no instance rebuild, no data loss."
-  value       = "aws ssm send-command --region ${var.aws_region} --instance-ids ${aws_instance.app.id} --document-name AWS-RunShellScript --parameters 'commands=[\"/usr/local/bin/pyforge-reconfigure\"]' --query Command.CommandId --output text"
+  value       = "aws ssm send-command --region ${var.aws_region} --instance-ids ${aws_instance.app.id} --document-name AWS-RunShellScript --parameters 'commands=[\"/usr/local/bin/dataforged-reconfigure\"]' --query Command.CommandId --output text"
 }
 
 output "next_steps" {

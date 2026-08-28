@@ -51,7 +51,7 @@ STAGE3_PROJECTS = [
             "automatically)."
         ),
         "milestones": [
-            "Connect to the warehouse from Jupyter (psycopg2, host='warehouse', user/password 'pyforge', db 'warehouse') and explore the schema with \\d-style queries against information_schema.",
+            "Connect to the warehouse from Jupyter (psycopg2, host='warehouse', user/password 'dataforged', db 'warehouse') and explore the schema with \\d-style queries against information_schema.",
             "Revenue questions: total revenue per country; per category; top-10 customers by lifetime spend (joins across all four tables).",
             "HAVING practice: categories with revenue > 10,000; customers with 3+ completed orders.",
             "Find customers who never ordered (LEFT JOIN ... IS NULL, then rewrite with NOT EXISTS — compare plans with EXPLAIN).",

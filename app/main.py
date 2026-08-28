@@ -1,5 +1,5 @@
 """
-PyForge — project-based Python → data engineering → AI learning app.
+DataForged — project-based Python → data engineering → AI learning app.
 
 Two modes, one codebase (see config.py):
 
@@ -56,9 +56,9 @@ class _RequestIdFilter(logging.Filter):
 
 
 logging.getLogger().addFilter(_RequestIdFilter())
-log = logging.getLogger("pyforge")
+log = logging.getLogger("dataforged")
 
-app = FastAPI(title="PyForge", docs_url="/api/docs")
+app = FastAPI(title="DataForged", docs_url="/api/docs")
 app.state.store = build_store()
 app.state.limiter = RateLimiter()
 
@@ -384,7 +384,7 @@ def portfolio_download(request: Request) -> Response:
         content=md,
         media_type="text/markdown; charset=utf-8",
         headers={
-            "Content-Disposition": 'attachment; filename="pyforge-portfolio.md"'
+            "Content-Disposition": 'attachment; filename="dataforged-portfolio.md"'
         },
     )
 

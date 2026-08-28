@@ -6,7 +6,7 @@
 # --- required ---------------------------------------------------------------
 
 variable "domain_name" {
-  description = "Domain you registered in Route 53, e.g. pyforge.dev. A public hosted zone for it must already exist (buying it in Route 53 creates one)."
+  description = "Domain you registered in Route 53, e.g. dataforged.dev. A public hosted zone for it must already exist (buying it in Route 53 creates one)."
   type        = string
 
   validation {
@@ -15,14 +15,14 @@ variable "domain_name" {
       && !startswith(var.domain_name, "http")
       && !contains(["example.com", "example.org", "example.net", "your-domain.com"], var.domain_name)
     )
-    error_message = "domain_name must be your real bare domain (e.g. mypyforge.com) — no scheme, no example.com placeholders."
+    error_message = "domain_name must be your real bare domain (e.g. mydataforged.com) — no scheme, no example.com placeholders."
   }
 }
 
 # --- naming -----------------------------------------------------------------
 
 variable "subdomain" {
-  description = "Host to serve from. Empty string uses the bare domain (pyforge.dev); \"learn\" gives learn.pyforge.dev."
+  description = "Host to serve from. Empty string uses the bare domain (dataforged.dev); \"learn\" gives learn.dataforged.dev."
   type        = string
   default     = ""
 }
@@ -67,7 +67,7 @@ variable "root_volume_gb" {
 # --- application ------------------------------------------------------------
 
 variable "repo_url" {
-  description = "Public git URL of your PyForge repo, cloned on boot. Required for one-click deploy (leave empty only if you will upload code manually)."
+  description = "Public git URL of your DataForged repo, cloned on boot. Required for one-click deploy (leave empty only if you will upload code manually)."
   type        = string
   default     = ""
 

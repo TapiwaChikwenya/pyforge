@@ -1,5 +1,5 @@
 # =============================================================================
-# PyForge on AWS — edit this file, then run:
+# DataForged on AWS — edit this file, then run:
 #
 #   cd infra/terraform
 #   cp terraform.tfvars.example terraform.tfvars   # if you haven't
@@ -38,7 +38,7 @@ data_volume_gb = 20   # encrypted EBS for Postgres Docker volumes
 
 # --- 3. Your code (REQUIRED for one-click) ---------------------------------
 # Must be a public https://…/*.git URL. This repo's default:
-repo_url    = "https://github.com/TapiwaChikwenya/pyforge.git"
+repo_url    = "https://github.com/TapiwaChikwenya/data-forged.git"
 repo_branch = "main"
 
 
@@ -65,7 +65,7 @@ budget_alert_email = "YOUR-EMAIL@gmail.com"
 
 # --- 7. Optional offsite backups --------------------------------------------
 # Create an S3 bucket first, then set its name here (IAM + cron are wired).
-# backup_s3_bucket = "my-pyforge-backups"
+# backup_s3_bucket = "my-dataforged-backups"
 
 
 # --- 8. Advanced -------------------------------------------------------------

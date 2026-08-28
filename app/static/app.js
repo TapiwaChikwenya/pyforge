@@ -1,5 +1,5 @@
 /* ============================================================
-   PyForge frontend — a small hand-rolled SPA.
+   DataForged frontend — a small hand-rolled SPA.
    Two views: dashboard (learning path) and project workspace.
    ============================================================ */
 const $main = document.getElementById('main');
@@ -178,7 +178,7 @@ const isHosted = () => STATE.mode === 'hosted';
 /* Anonymous progress lives in the browser. Wrapped because storage can be
    unavailable (private mode, embedded frames) — then we degrade to memory. */
 const LocalProgress = {
-  KEY: 'pyforge_progress_v1',
+  KEY: 'dataforged_progress_v1',
   _memory: null,
   _store() {
     try { window.localStorage.setItem('__t', '1'); window.localStorage.removeItem('__t'); return window.localStorage; }
@@ -398,7 +398,7 @@ async function showDashboard() {
   await maybeMergeLocalProgress();
   updateHeader();
   const byId = Object.fromEntries(curriculum.projects.map(p => [p.id, p]));
-  const F = window.PyForgeFeatures;
+  const F = window.DataForgedFeatures;
   const heroCta = F && F.dashboardHeroCtaHtml
     ? F.dashboardHeroCtaHtml(curriculum)
     : `<div class="cta-row"><button class="cta-primary" onclick="showProject('${curriculum.projects[0].id}')">Start learning ▸</button></div>`;
@@ -499,11 +499,11 @@ function renderFooter() {
   const el = document.getElementById('footer');
   if (!el) return;
   if (!isHosted()) {
-    el.textContent = 'PyForge · your progress is saved automatically · full stack docs in RUNBOOK.md';
+    el.textContent = 'DataForged · your progress is saved automatically · full stack docs in RUNBOOK.md';
   } else if (STATE.user) {
-    el.textContent = 'PyForge · Python runs in your browser · progress saved to your account';
+    el.textContent = 'DataForged · Python runs in your browser · progress saved to your account';
   } else {
-    el.textContent = 'PyForge · Python runs in your browser · progress saved on this device';
+    el.textContent = 'DataForged · Python runs in your browser · progress saved on this device';
   }
 }
 
@@ -534,10 +534,10 @@ async function showProject(pid) {
     current.milestones_done = local.milestones[pid] || [];
   }
   const p = current.project;
-  if (window.PyForgeFeatures) {
-    window.PyForgeFeatures.track('project_open', { project_id: p.id });
-    if (window.PyForgeFeatures.ResumeState) {
-      window.PyForgeFeatures.ResumeState.save({ project_id: p.id });
+  if (window.DataForgedFeatures) {
+    window.DataForgedFeatures.track('project_open', { project_id: p.id });
+    if (window.DataForgedFeatures.ResumeState) {
+      window.DataForgedFeatures.ResumeState.save({ project_id: p.id });
     }
   }
   const tier = p.stack_tier || 'light';
@@ -552,7 +552,7 @@ async function showProject(pid) {
       <div class="tag">${p.tagline}</div>
       <div class="chips" style="margin-top:10px">
         <span class="chip level">${p.level}</span>
-        ${window.PyForgeFeatures ? window.PyForgeFeatures.stackChip(tier) : ''}
+        ${window.DataForgedFeatures ? window.DataForgedFeatures.stackChip(tier) : ''}
         ${tech.map(t => `<span class="chip">${t}</span>`).join('')}
         <span class="chip">~${p.est_hours}h</span>
       </div>
@@ -624,7 +624,7 @@ function switchTab(name) {
     el.innerHTML = `<div class="panel">
       <h4 style="margin-top:0">Progressive stack unlock</h4>
       <p>Only start what this project needs — don't bring up Spark/Airflow early.</p>
-      <p>${window.PyForgeFeatures ? window.PyForgeFeatures.stackChip(tier) : tier}</p>
+      <p>${window.DataForgedFeatures ? window.DataForgedFeatures.stackChip(tier) : tier}</p>
       <h4>What must be running</h4>
       <p>${e.services.map(s => `• ${s}`).join('<br>')}</p>
       <h4>One command for this tier</h4>
@@ -635,7 +635,7 @@ function switchTab(name) {
     </div>`;
 
   } else if (name === 'exercises') {
-    const F = window.PyForgeFeatures;
+    const F = window.DataForgedFeatures;
     el.innerHTML = p.exercises.map((ex, i) => `
       <div class="ex ${current.exercises_passed[ex.id] ? 'passed' : ''} ${i === 0 ? 'open' : ''}" id="ex-${ex.id}">
         <div class="ex-head" role="button" tabindex="0" onclick="toggleEx('${ex.id}')"
@@ -774,8 +774,8 @@ function toggleEx(id) {
   const node = document.getElementById('ex-' + id);
   const nowOpen = !node.classList.contains('open');
   node.classList.toggle('open', nowOpen);
-  if (nowOpen && window.PyForgeFeatures && window.PyForgeFeatures.ResumeState && current) {
-    window.PyForgeFeatures.ResumeState.save({ project_id: current.project.id, exercise_id: id });
+  if (nowOpen && window.DataForgedFeatures && window.DataForgedFeatures.ResumeState && current) {
+    window.DataForgedFeatures.ResumeState.save({ project_id: current.project.id, exercise_id: id });
   }
   // Create on first open, re-measure on later ones — on the next frame, so the
   // browser has applied the class and the element is genuinely visible.
@@ -798,7 +798,7 @@ async function runExercise(id, heavy) {
   const ed = ensureEditor(id);
   const code = ed ? ed.getValue() : '';
   const say = (msg) => { if (note) note.textContent = msg || ''; };
-  const F = window.PyForgeFeatures;
+  const F = window.DataForgedFeatures;
 
   btn.disabled = true; spin.style.display = 'block'; res.className = 'result';
   if (F) F.track('exercise_run', { exercise_id: id, project_id: current.project.id });
@@ -875,7 +875,7 @@ function confettiPulse() {
 }
 
 (async function boot() {
-  const F = window.PyForgeFeatures;
+  const F = window.DataForgedFeatures;
   if (F && await F.consumeDeepLink()) return;
   await showDashboard();
 })();

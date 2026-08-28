@@ -1,5 +1,5 @@
 # =============================================================================
-# PyForge — public hosted deployment.
+# DataForged — public hosted deployment.
 #
 #   cp .env.hosted.example .env.hosted   (fill it in — see DEPLOY.md)
 #   docker compose -f docker-compose.hosted.yml --env-file .env.hosted up -d
@@ -16,13 +16,13 @@ services:
     build:
       context: ./app
       dockerfile: Dockerfile.hosted
-    container_name: pyforge-web
+    container_name: dataforged-web
     restart: unless-stopped
     environment:
-      - PYFORGE_MODE=hosted
+      - DATAFORGED_MODE=hosted
       - "BASE_URL=${BASE_URL:?set BASE_URL in .env.hosted}"
       - "SECRET_KEY=${SECRET_KEY:?set SECRET_KEY - generate with openssl rand -hex 32}"
-      - "DATABASE_URL=postgresql://pyforge:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/pyforge"
+      - "DATABASE_URL=postgresql://dataforged:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/dataforged"
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
       - COOKIE_SECURE=${COOKIE_SECURE:-true}
@@ -40,16 +40,16 @@ services:
 
   db:
     image: postgres:16-alpine
-    container_name: pyforge-db
+    container_name: dataforged-db
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=pyforge
+      - POSTGRES_USER=dataforged
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
-      - POSTGRES_DB=pyforge
+      - POSTGRES_DB=dataforged
     volumes:
-      - pyforge-db:/var/lib/postgresql/data
+      - dataforged-db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pyforge -d pyforge"]
+      test: ["CMD-SHELL", "pg_isready -U dataforged -d dataforged"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -57,15 +57,15 @@ services:
 
   caddy:
     image: caddy:2-alpine
-    container_name: pyforge-caddy
+    container_name: dataforged-caddy
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     environment:
-      # Bare domain (pyforge.example.com) => automatic HTTPS via Let's Encrypt.
+      # Bare domain (dataforged.example.com) => automatic HTTPS via Let's Encrypt.
       # Use ":80" instead while testing locally without a domain.
-      - SITE_ADDRESS=${SITE_ADDRESS:?set SITE_ADDRESS, e.g. pyforge.example.com}
+      - SITE_ADDRESS=${SITE_ADDRESS:?set SITE_ADDRESS, e.g. dataforged.example.com}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data          # certificates live here — keep this volume
@@ -74,7 +74,7 @@ services:
       - web
 
 volumes:
-  pyforge-db:
+  dataforged-db:
   web-data:
   caddy-data:
   caddy-config:

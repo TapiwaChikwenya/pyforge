@@ -74,7 +74,7 @@ flowchart TD
 
 | Symptom | Check |
 |---------|-------|
-| No onboarding card | `localStorage.pyforge_onboarding_v1 === '1'` — clear it |
+| No onboarding card | `localStorage.dataforged_onboarding_v1 === '1'` — clear it |
 | Mentor never unlocks | Fail the check 3 times (not syntax-only editor edits) |
 | Friction empty | Run exercises; events write to `app/data/analytics.json` |
 | Solutions 403 | Pass the exercise first |

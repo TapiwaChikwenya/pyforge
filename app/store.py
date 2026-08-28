@@ -20,7 +20,7 @@ from typing import Any
 
 import config
 
-log = logging.getLogger("pyforge.store")
+log = logging.getLogger("dataforged.store")
 
 
 class LocalJsonStore:

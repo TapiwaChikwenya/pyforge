@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-command AWS deploy for PyForge (after the domain is in Route 53).
+# One-command AWS deploy for DataForged (after the domain is in Route 53).
 #
 # Prerequisites:
 #   - AWS CLI configured (aws sts get-caller-identity works)

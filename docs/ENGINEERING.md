@@ -1,6 +1,6 @@
 # Engineering features
 
-Operational and security hardening for the PyForge app and deploy path.
+Operational and security hardening for the DataForged app and deploy path.
 
 ## Purpose
 
@@ -19,7 +19,7 @@ when hosted publicly — without changing the curriculum pedagogy.
 
 | Input | Output |
 |-------|--------|
-| `PYFORGE_MODE`, env secrets | Mode-gated API surface |
+| `DATAFORGED_MODE`, env secrets | Mode-gated API surface |
 | Learner code (local only) | Pass/fail from sandboxed subprocess |
 | Browser progress posts (hosted) | Whitelisted rows in Postgres |
 | `/healthz` probes | 200 ready / 503 DB down (hosted) |
@@ -108,6 +108,6 @@ emitting `<pre><code>` inside `.sol-card`.
 | Everyone signed out | `SECRET_KEY` changed / missing |
 | 401 on every API call | `ALLOW_ANONYMOUS=false` without a session |
 | 429 under ALB | `TRUST_PROXY=true` so limits key on real client IP |
-| Backup cron silent | `/var/log/pyforge-backup.log` on the EC2 host |
+| Backup cron silent | `/var/log/dataforged-backup.log` on the EC2 host |
 | Code snippet renders as plain text in the UI | Its container is missing from the scoped `pre` / `code` selector groups in `app.css` — run `pytest tests/test_frontend_assets.py` |
 | Editor lines get boxes/padding | A broad `.ex-body pre` style crept back in; the same test catches it |

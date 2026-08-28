@@ -1,4 +1,4 @@
-# Hosting PyForge on AWS
+# Hosting DataForged on AWS
 
 Companion to `DEPLOY.md`, with the AWS-specific decisions — and an honest
 answer to the question everyone asks first: **what happens to the Spark
@@ -14,7 +14,7 @@ Only two things: the app container and a Postgres database.
                     ┌──────────────────────────────────────────┐
   learner's         │  AWS                                     │
   browser  ────────▶│  ┌────────────┐      ┌────────────────┐  │
-   │                │  │ PyForge    │─────▶│ Postgres       │  │
+   │                │  │ DataForged    │─────▶│ Postgres       │  │
    │                │  │ (FastAPI)  │      │ (user progress)│  │
    │                │  └────────────┘      └────────────────┘  │
    │                │   serves JSON + static files.            │
@@ -130,7 +130,7 @@ curl -SL https://github.com/docker/compose/releases/latest/download/docker-compo
 chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
 # 3. Deploy
-git clone <your repo> pyforge && cd pyforge
+git clone <your repo> dataforged && cd dataforged
 cp .env.hosted.example .env.hosted
 nano .env.hosted            # SITE_ADDRESS, BASE_URL, secrets (see below)
 docker compose -f docker-compose.hosted.yml --env-file .env.hosted up -d --build
@@ -143,12 +143,12 @@ already resolve and port 80 must be reachable.
 Parameter Store (free for standard parameters) and pull at boot:
 
 ```bash
-aws ssm put-parameter --name /pyforge/SECRET_KEY --type SecureString --value "$(openssl rand -hex 32)"
-aws ssm put-parameter --name /pyforge/POSTGRES_PASSWORD --type SecureString --value "$(openssl rand -hex 24)"
-aws ssm put-parameter --name /pyforge/GITHUB_CLIENT_SECRET --type SecureString --value "..."
+aws ssm put-parameter --name /dataforged/SECRET_KEY --type SecureString --value "$(openssl rand -hex 32)"
+aws ssm put-parameter --name /dataforged/POSTGRES_PASSWORD --type SecureString --value "$(openssl rand -hex 24)"
+aws ssm put-parameter --name /dataforged/GITHUB_CLIENT_SECRET --type SecureString --value "..."
 
 # in a small start script, with an instance role granting ssm:GetParameter
-export SECRET_KEY=$(aws ssm get-parameter --name /pyforge/SECRET_KEY --with-decryption --query Parameter.Value --output text)
+export SECRET_KEY=$(aws ssm get-parameter --name /dataforged/SECRET_KEY --with-decryption --query Parameter.Value --output text)
 ```
 
 Give the instance an IAM role (not access keys) with `ssm:GetParameter` and, if
@@ -159,8 +159,8 @@ so you can use Session Manager instead.
 snapshots (Data Lifecycle Manager, a few clicks) or `pg_dump` to S3 on a cron:
 
 ```bash
-docker compose -f docker-compose.hosted.yml exec -T db pg_dump -U pyforge pyforge \
-  | gzip | aws s3 cp - s3://your-bucket/pyforge/$(date +%F).sql.gz
+docker compose -f docker-compose.hosted.yml exec -T db pg_dump -U dataforged dataforged \
+  | gzip | aws s3 cp - s3://your-bucket/dataforged/$(date +%F).sql.gz
 ```
 
 ---

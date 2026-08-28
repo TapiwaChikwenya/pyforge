@@ -1,4 +1,4 @@
-# PyForge
+# DataForged
 
 Project-based learning platform: **Python → algorithms → SQL/NoSQL → ETL → Spark → Airflow → AI**.
 

@@ -39,13 +39,13 @@ def build_portfolio_markdown(
     stats = progress_stats(progress)
     exercises = progress.get("exercises") or {}
     milestones = progress.get("milestones") or {}
-    name = (user or {}).get("login") or (user or {}).get("name") or "PyForge learner"
+    name = (user or {}).get("login") or (user or {}).get("name") or "DataForged learner"
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     lines = [
-        f"# {name} — PyForge portfolio",
+        f"# {name} — DataForged portfolio",
         "",
-        f"Generated {today} from [PyForge](https://github.com/TapiwaChikwenya/pyforge).",
+        f"Generated {today} from [DataForged](https://github.com/TapiwaChikwenya/data-forged).",
         "",
         "## Summary",
         "",
@@ -84,8 +84,8 @@ def build_portfolio_markdown(
         "## How to reproduce",
         "",
         "```bash",
-        "git clone https://github.com/TapiwaChikwenya/pyforge.git",
-        "cd pyforge && docker compose up -d --build",
+        "git clone https://github.com/TapiwaChikwenya/data-forged.git",
+        "cd dataforged && docker compose up -d --build",
         "# open http://localhost:8000",
         "```",
         "",
@@ -98,10 +98,10 @@ def build_certificate_html(
     user: dict[str, Any] | None = None,
 ) -> str:
     stats = progress_stats(progress)
-    name = (user or {}).get("name") or (user or {}).get("login") or "PyForge Learner"
+    name = (user or {}).get("name") or (user or {}).get("login") or "DataForged Learner"
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     return f"""<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><title>PyForge certificate</title>
+<html lang="en"><head><meta charset="utf-8"><title>DataForged certificate</title>
 <style>
 body{{font-family:Georgia,serif;background:#0b0f17;color:#e7edf7;margin:0;padding:40px}}
 .card{{max-width:720px;margin:0 auto;border:2px solid #38bdf8;padding:48px;text-align:center}}
@@ -113,7 +113,7 @@ h1{{font-size:28px;letter-spacing:.04em;margin:0 0 8px}}
 </style></head><body>
 <div class="card">
   <h1>CERTIFICATE OF COMPLETION</h1>
-  <div class="sub">PyForge — Python → Data Engineering → AI</div>
+  <div class="sub">DataForged — Python → Data Engineering → AI</div>
   <div>This acknowledges that</div>
   <div class="name">{name}</div>
   <div class="meta">

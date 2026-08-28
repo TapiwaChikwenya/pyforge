@@ -1,4 +1,4 @@
-# Testing PyForge locally before you deploy
+# Testing DataForged locally before you deploy
 
 Two rehearsals, in this order:
 
@@ -46,7 +46,7 @@ Ports that must be free: **8000, 8888** now; **5432, 27017, 6379** in A4;
 ### A2. Start the base stack
 
 ```bash
-cd pyforge
+cd dataforged
 docker compose up -d --build
 docker compose ps          # app + jupyter, both "running"
 ```
@@ -88,9 +88,9 @@ Then open **http://localhost:8000** and confirm, in order:
 docker compose --profile db up -d
 sleep 25                                  # first start seeds the databases
 
-docker compose exec warehouse psql -U pyforge -d warehouse \
+docker compose exec warehouse psql -U dataforged -d warehouse \
   -c "SELECT count(*) FROM orders;"       # 5000
-docker compose exec warehouse psql -U pyforge -d warehouse \
+docker compose exec warehouse psql -U dataforged -d warehouse \
   -c "SELECT extname FROM pg_extension WHERE extname='vector';"   # vector
 docker compose exec mongo mongosh appdata --quiet \
   --eval "db.reviews.countDocuments()"    # 800
@@ -230,7 +230,7 @@ Worth doing, since the callback URL is the most common production mistake.
 4. Confirm the merge worked: the exercise you passed anonymously in B4 is still
    ticked, and is now on your account:
    ```bash
-   curl -s localhost/api/progress -b "pyforge_session=<cookie from DevTools>"
+   curl -s localhost/api/progress -b "dataforged_session=<cookie from DevTools>"
    ```
    Simpler check: open a private window, sign in there, and see the same
    progress — that's the cross-device promise.

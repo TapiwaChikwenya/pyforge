@@ -1,12 +1,12 @@
 """
-Runtime configuration — one switch decides how PyForge behaves.
+Runtime configuration — one switch decides how DataForged behaves.
 
-PYFORGE_MODE=local  (default)
+DATAFORGED_MODE=local  (default)
     Your own machine. Exercises execute server-side in a sandboxed subprocess,
     there is no login, and progress lives in a JSON file. This is the mode the
     docker-compose stack uses.
 
-PYFORGE_MODE=hosted
+DATAFORGED_MODE=hosted
     Public deployment. The server NEVER executes learner code — exercises run
     in the visitor's browser via Pyodide. Sign-in is GitHub OAuth and progress
     is stored per user in Postgres. Anonymous visitors get the full curriculum
@@ -27,7 +27,7 @@ def _bool(name: str, default: bool) -> bool:
     return raw.strip().lower() in ("1", "true", "yes", "on")
 
 
-MODE = os.environ.get("PYFORGE_MODE", "local").strip().lower()
+MODE = os.environ.get("DATAFORGED_MODE", "local").strip().lower()
 HOSTED = MODE == "hosted"
 
 # --- hosted-only settings -------------------------------------------------
@@ -42,7 +42,7 @@ SECRET_KEY_PROVIDED = bool(os.environ.get("SECRET_KEY"))
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
-SESSION_COOKIE = "pyforge_session"
+SESSION_COOKIE = "dataforged_session"
 SESSION_MAX_AGE = 60 * 60 * 24 * 30          # 30 days
 COOKIE_SECURE = _bool("COOKIE_SECURE", BASE_URL.startswith("https://"))
 

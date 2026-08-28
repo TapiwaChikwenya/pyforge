@@ -20,7 +20,7 @@ from airflow.exceptions import AirflowSkipException
 WORKSPACE = "/workspace"          # shared volume: same path on Spark workers
 
 default_args = {
-    "owner": "pyforge",
+    "owner": "dataforged",
     "retries": 2,                                  # retried by the scheduler,
     "retry_delay": timedelta(minutes=1),           # so tasks MUST be idempotent
 }
@@ -76,7 +76,7 @@ with DAG(
     schedule="@daily",
     catchup=False,                 # don't backfill every day since start_date
     default_args=default_args,
-    tags=["pyforge", "example"],
+    tags=["dataforged", "example"],
 ) as dag:
 
     generate = PythonOperator(task_id="generate", python_callable=_generate)

@@ -1,11 +1,11 @@
 /* ============================================================
-   PyForge learning features: onboarding, stack unlock, mentor,
+   DataForged learning features: onboarding, stack unlock, mentor,
    spaced review, portfolio, analytics, community solutions,
    local deep-links.
    ============================================================ */
 
 const ReviewState = {
-  KEY: 'pyforge_review_v1',
+  KEY: 'dataforged_review_v1',
   _read() {
     try { return JSON.parse(localStorage.getItem(this.KEY)) || {}; }
     catch (e) { return {}; }
@@ -40,7 +40,7 @@ const ReviewState = {
 };
 
 const Onboarding = {
-  KEY: 'pyforge_onboarding_v1',
+  KEY: 'dataforged_onboarding_v1',
   done() {
     try { return localStorage.getItem(this.KEY) === '1'; } catch (e) { return false; }
   },
@@ -51,7 +51,7 @@ const Onboarding = {
 };
 
 const ResumeState = {
-  KEY: 'pyforge_resume_v1',
+  KEY: 'dataforged_resume_v1',
   save(partial) {
     const prev = this.get() || {};
     const next = Object.assign({}, prev, partial || {}, { at: new Date().toISOString() });
@@ -379,8 +379,8 @@ function localLaunchHtml(ex) {
   const deep = `http://localhost:8000${L.url_path || '/'}`;
   const block = [
     '# 1) Clone + start base stack',
-    'git clone https://github.com/TapiwaChikwenya/pyforge.git',
-    'cd pyforge',
+    'git clone https://github.com/TapiwaChikwenya/data-forged.git',
+    'cd dataforged',
     cmd,
     '',
     '# 2) Open this exercise locally',
@@ -411,7 +411,7 @@ async function consumeDeepLink() {
 }
 
 /* hooks used from app.js */
-window.PyForgeFeatures = {
+window.DataForgedFeatures = {
   ReviewState, ResumeState, track, mentorPanelHtml, solutionsSlotHtml, loadCommunitySolutions,
   refreshMentor, localLaunchHtml, enhanceDashboardHtml, dashboardHeroCtaHtml, stackChip,
   showPortfolioDesk, showReviewDesk, showFrictionDesk, startFirstHour, resumeLearning,

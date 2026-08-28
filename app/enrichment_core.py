@@ -498,7 +498,7 @@ ENRICHMENT_CORE = {
 "status 200 and that exact JSON.\n\n"
 "Endpoints are plain functions wearing a decorator; the returned dict becomes the "
 "JSON response automatically. This is the exact pattern serving the very app "
-"you're using right now — after this project, read `app/main.py` in the PyForge "
+"you're using right now — after this project, read `app/main.py` in the DataForged "
 "source and you'll recognize everything."
         ),
         "refresher": (

@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 @pytest.fixture()
 def local_client(monkeypatch, tmp_path):
-    monkeypatch.setenv("PYFORGE_MODE", "local")
+    monkeypatch.setenv("DATAFORGED_MODE", "local")
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.setenv("RATE_LIMIT_WRITES_PER_MINUTE", "1000")
     # Reload config + app modules with local mode.
@@ -44,7 +44,7 @@ def local_client(monkeypatch, tmp_path):
 
 @pytest.fixture()
 def hosted_client(monkeypatch, tmp_path):
-    monkeypatch.setenv("PYFORGE_MODE", "hosted")
+    monkeypatch.setenv("DATAFORGED_MODE", "hosted")
     monkeypatch.setenv("SECRET_KEY", "test-secret-key-for-unit-tests")
     monkeypatch.setenv("ALLOW_ANONYMOUS", "true")
     monkeypatch.setenv("TRUST_PROXY", "true")
@@ -150,7 +150,7 @@ def test_session_cookie_roundtrip(monkeypatch):
     import config
     import auth
 
-    signer = URLSafeTimedSerializer(config.SECRET_KEY, salt="pyforge-session")
+    signer = URLSafeTimedSerializer(config.SECRET_KEY, salt="dataforged-session")
     raw = signer.dumps({"uid": 42})
 
     class FakeReq:
@@ -165,7 +165,7 @@ def test_session_cookie_roundtrip(monkeypatch):
 
 
 def test_allow_anonymous_false_blocks_api(monkeypatch, tmp_path):
-    monkeypatch.setenv("PYFORGE_MODE", "hosted")
+    monkeypatch.setenv("DATAFORGED_MODE", "hosted")
     monkeypatch.setenv("SECRET_KEY", "test-secret-key-for-unit-tests")
     monkeypatch.setenv("ALLOW_ANONYMOUS", "false")
     monkeypatch.setenv("RATE_LIMIT_WRITES_PER_MINUTE", "1000")

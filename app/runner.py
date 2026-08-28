@@ -31,7 +31,7 @@ HEAVY_TIMEOUT = 180           # seconds, exercises that boot a local Spark
 # Env vars never passed into learner code.
 _BLOCKED_ENV_PREFIXES = (
     "AWS_", "GITHUB_", "SECRET", "TOKEN", "PASSWORD", "POSTGRES_",
-    "DATABASE_URL", "REDIS_", "MONGO", "AIRFLOW__", "PYFORGE_",
+    "DATABASE_URL", "REDIS_", "MONGO", "AIRFLOW__", "DATAFORGED_",
 )
 
 
@@ -91,7 +91,7 @@ def run_exercise(user_code: str, check_code: str, heavy: bool = False) -> dict:
         + check_code
     )
 
-    with tempfile.TemporaryDirectory(prefix="pyforge-ex-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="dataforged-ex-") as tmp:
         script_path = Path(tmp) / "exercise.py"
         script_path.write_text(script, encoding="utf-8")
         run_kwargs: dict = {

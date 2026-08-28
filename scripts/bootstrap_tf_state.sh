@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Create an S3 bucket for Terraform remote state (optional hardening).
 #
-#   ./scripts/bootstrap_tf_state.sh my-pyforge-tfstate us-east-1
+#   ./scripts/bootstrap_tf_state.sh my-dataforged-tfstate us-east-1
 #
 set -euo pipefail
 BUCKET="${1:?bucket name required}"
@@ -22,7 +22,7 @@ aws s3api put-public-access-block --bucket "$BUCKET" \
 TF_DIR="$(cd "$(dirname "$0")/../infra/terraform" && pwd)"
 cat > "$TF_DIR/backend.hcl" <<EOF
 bucket       = "$BUCKET"
-key          = "pyforge/terraform.tfstate"
+key          = "dataforged/terraform.tfstate"
 region       = "$REGION"
 encrypt      = true
 use_lockfile = true

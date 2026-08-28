@@ -1,11 +1,11 @@
-# PyForge — public hosted build.
+# DataForged — public hosted build.
 #
 # Deliberately minimal: this image serves the curriculum and stores progress.
 # It has no Java, no Spark, no data-science libraries and no code-execution
 # path, because learner code runs in the browser (Pyodide), never here.
 FROM python:3.11-slim
 
-RUN useradd --create-home --uid 10001 pyforge
+RUN useradd --create-home --uid 10001 dataforged
 
 WORKDIR /app
 
@@ -20,11 +20,11 @@ COPY curriculum*.py enrichment*.py interviews_core.py ./
 COPY migrations ./migrations
 COPY static ./static
 
-RUN mkdir -p /app/data && chown -R pyforge:pyforge /app/data
+RUN mkdir -p /app/data && chown -R dataforged:dataforged /app/data
 
-USER pyforge
+USER dataforged
 
-ENV PYFORGE_MODE=hosted \
+ENV DATAFORGED_MODE=hosted \
     PYTHONUNBUFFERED=1 \
     TRUST_PROXY=true
 

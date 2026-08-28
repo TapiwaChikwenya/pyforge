@@ -1,12 +1,12 @@
-# PyForge Runbook
+# DataForged Runbook
 
-Everything you need to operate PyForge — 34 projects across 10 stages, from
+Everything you need to operate DataForged — 34 projects across 10 stages, from
 Python fundamentals to Spark, Airflow, databases and AI. There are no manual
 scripts to run and no per-project configuration: every service is fully wired
 in `docker-compose.yml`, and every database seeds itself on first start.
 
 > **Hosting it publicly instead?** This runbook covers the local stack, where
-> exercises run server-side on your own machine. To put PyForge on the internet
+> exercises run server-side on your own machine. To put DataForged on the internet
 > for other developers, see **DEPLOY.md** — the hosted mode runs learner code in
 > the visitor's browser (Pyodide) and removes every code-execution endpoint from
 > the server. For AWS specifically — instance sizing, secrets, costs, and what
@@ -53,7 +53,7 @@ new version, so `--build` matters:
 
 ```
 docker compose down                       # keeps all volumes
-# ...replace the pyforge folder with the new one...
+# ...replace the dataforged folder with the new one...
 docker compose up -d --build              # add the profiles you use
 ```
 
@@ -84,13 +84,13 @@ docker compose --profile db --profile spark --profile airflow down -v
 
 | Service | URL / DSN | Credentials |
 |---|---|---|
-| PyForge learning app | http://localhost:8000 | none |
+| DataForged learning app | http://localhost:8000 | none |
 | App's own API docs | http://localhost:8000/api/docs | none |
 | JupyterLab | http://localhost:8888 | none (token disabled — local use only) |
 | Spark master UI | http://localhost:8080 | none |
 | Spark cluster endpoint | `spark://spark-master:7077` | used from code |
 | Airflow UI | http://localhost:8085 | `admin` / `admin` |
-| Postgres warehouse | `localhost:5432` / from containers: host `warehouse` | db `warehouse`, user `pyforge`, pass `pyforge` |
+| Postgres warehouse | `localhost:5432` / from containers: host `warehouse` | db `warehouse`, user `dataforged`, pass `dataforged` |
 | MongoDB | `localhost:27017` / from containers: host `mongo` | none, db `appdata` |
 | Redis | `localhost:6379` / from containers: host `redis` | none |
 
@@ -107,7 +107,7 @@ Connection snippets (they work as-is inside JupyterLab):
 
 ```python
 import psycopg2, pymongo, redis
-pg    = psycopg2.connect(host='warehouse', dbname='warehouse', user='pyforge', password='pyforge')
+pg    = psycopg2.connect(host='warehouse', dbname='warehouse', user='dataforged', password='dataforged')
 mongo = pymongo.MongoClient('mongodb://mongo:27017').appdata
 cache = redis.Redis(host='redis', decode_responses=True)
 ```
@@ -122,7 +122,7 @@ Every knob lives in `docker-compose.yml`. Defaults work; change only with reason
 |---|---|---|---|
 | App / Jupyter / Spark UI / Airflow ports | `<service>.ports` | 8000 / 8888 / 8080 / 8085 | port clash — change the **left** side only |
 | Postgres / Mongo / Redis ports | `<service>.ports` | 5432 / 27017 / 6379 | port clash with a local install |
-| Warehouse credentials | `warehouse.environment` | pyforge / pyforge / warehouse | applied on **first** start only (volume init) |
+| Warehouse credentials | `warehouse.environment` | dataforged / dataforged / warehouse | applied on **first** start only (volume init) |
 | Spark worker resources | `SPARK_WORKER_CORES/MEMORY` | 2 cores / 2 GB each | bigger datasets in Stage 7 |
 | Airflow admin login | `_AIRFLOW_ADMIN_USER/PASSWORD` | admin / admin | applied on first start only |
 | Airflow executor | `AIRFLOW__CORE__EXECUTOR` | LocalExecutor | leave as is |
@@ -146,7 +146,7 @@ folder there.
 
 **Re-seeding a database:** the init scripts run only on an empty volume. To
 reload seeds: `docker compose --profile db down` then
-`docker volume rm pyforge_warehouse-data` (or `pyforge_mongo-data`), then start
+`docker volume rm dataforged_warehouse-data` (or `dataforged_mongo-data`), then start
 again. Your own tables go too — export first if you care.
 
 ---
@@ -158,7 +158,7 @@ docker compose ps                         # what's running
 docker compose logs -f app                # follow app logs (or jupyter / airflow / warehouse)
 docker compose restart app                # restart one service
 docker compose up -d --build app          # rebuild after editing app code
-docker compose exec warehouse psql -U pyforge -d warehouse   # SQL shell
+docker compose exec warehouse psql -U dataforged -d warehouse   # SQL shell
 docker compose exec mongo mongosh appdata                    # Mongo shell
 docker compose exec redis redis-cli                          # Redis shell
 ```
@@ -166,8 +166,8 @@ docker compose exec redis redis-cli                          # Redis shell
 Backups:
 
 ```
-docker cp pyforge-app:/app/data/progress.json ./progress-backup.json     # learning progress
-docker compose exec warehouse pg_dump -U pyforge warehouse > warehouse.sql
+docker cp dataforged-app:/app/data/progress.json ./progress-backup.json     # learning progress
+docker compose exec warehouse pg_dump -U dataforged warehouse > warehouse.sql
 docker compose exec mongo mongodump --db appdata --archive > mongo.archive
 ```
 
@@ -199,7 +199,7 @@ docker compose exec mongo mongodump --db appdata --archive > mongo.archive
 ## 7. What's in the box
 
 ```
-pyforge/
+dataforged/
 ├── docker-compose.yml          # the whole stack; profiles: (base) / db / spark / airflow
 ├── RUNBOOK.md                  # this file
 ├── app/                        # the learning app (FastAPI + single-page UI)

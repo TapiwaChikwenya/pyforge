@@ -78,7 +78,7 @@ ENV_LIGHT = {
     "note": "The base stack is all you need: code in-app or in JupyterLab. Your files live in the workspace/ folder.",
 }
 ENV_DB = {
-    "services": ["base stack", "warehouse (Postgres+pgvector, localhost:5432, pyforge/pyforge)",
+    "services": ["base stack", "warehouse (Postgres+pgvector, localhost:5432, dataforged/dataforged)",
                  "mongo (localhost:27017)", "redis (localhost:6379)"],
     "command": "docker compose --profile db up -d",
     "note": "Adds the seeded databases: the Postgres warehouse (500 customers / 5000 orders, pgvector enabled), MongoDB (reviews + clickstream), and Redis. They persist in volumes and are reused across all later projects.",

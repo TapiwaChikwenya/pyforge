@@ -1,4 +1,4 @@
-# PyForge learning app (local mode)
+# DataForged learning app (local mode)
 # python:3.11-slim + a headless JRE so in-app PySpark exercises run.
 FROM python:3.11-slim
 
@@ -6,7 +6,7 @@ FROM python:3.11-slim
 RUN apt-get update \
     && apt-get install -y --no-install-recommends default-jre-headless \
     && rm -rf /var/lib/apt/lists/* \
-    && useradd --create-home --uid 10001 pyforge
+    && useradd --create-home --uid 10001 dataforged
 
 WORKDIR /app
 
@@ -16,12 +16,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Progress + rate-limit DB live here; writable by the non-root user.
-RUN mkdir -p /app/data && chown -R pyforge:pyforge /app/data
+RUN mkdir -p /app/data && chown -R dataforged:dataforged /app/data
 
-USER pyforge
+USER dataforged
 
 ENV PYTHONUNBUFFERED=1 \
-    PYFORGE_MODE=local
+    DATAFORGED_MODE=local
 
 EXPOSE 8000
 
