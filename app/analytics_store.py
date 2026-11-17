@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import tempfile
 import threading
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
-import config
 
 log = logging.getLogger("dataforged.analytics")
 
@@ -18,8 +18,47 @@ ALLOWED_EVENTS = frozenset({
     "exercise_open", "exercise_run", "exercise_fail", "exercise_pass",
     "project_open", "onboarding_start", "onboarding_complete",
     "review_open", "review_complete", "portfolio_export",
-    "mentor_unlock", "solution_view",
+    "mentor_unlock", "solution_view", "resume_open",
 })
+
+_MAX_META_BYTES = 8192
+_MAX_META_KEYS = 8
+_MAX_META_STR = 200
+_MAX_STORED_META = 1024
+
+
+def meta_too_large(meta: dict[str, Any] | None) -> bool:
+    """Reject payloads that are not a small JSON object."""
+    if not meta:
+        return False
+    try:
+        raw = json.dumps(meta, separators=(",", ":"))
+    except (TypeError, ValueError):
+        return True
+    return len(raw.encode("utf-8")) > _MAX_META_BYTES
+
+
+def _bound_meta(meta: dict[str, Any] | None) -> dict[str, Any]:
+    """Keep scalars only, and cap key count plus stored size."""
+    if not isinstance(meta, dict):
+        return {}
+    clean: dict[str, Any] = {}
+    for key, value in meta.items():
+        if len(clean) >= _MAX_META_KEYS:
+            break
+        name = str(key)[:64]
+        if isinstance(value, bool) or value is None or isinstance(value, int):
+            clean[name] = value
+        elif isinstance(value, float):
+            if value != value or value in (float("inf"), float("-inf")):
+                continue
+            clean[name] = value
+        elif isinstance(value, str):
+            clean[name] = value[:_MAX_META_STR]
+    raw = json.dumps(clean, separators=(",", ":"))
+    if len(raw.encode("utf-8")) > _MAX_STORED_META:
+        return {"truncated": True}
+    return clean
 
 
 class AnalyticsStore:
@@ -38,7 +77,24 @@ class AnalyticsStore:
             return []
 
     def _write(self, rows: list[dict[str, Any]]) -> None:
-        self.path.write_text(json.dumps(rows[-5000:], indent=2), encoding="utf-8")
+        """Atomic replace so a crash cannot leave a half-written file."""
+        payload = json.dumps(rows[-5000:], indent=2)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp_name = tempfile.mkstemp(
+            dir=self.path.parent, prefix=".analytics-", suffix=".tmp"
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(payload)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(tmp_name, self.path)
+        except Exception:
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                pass
+            raise
 
     def record(
         self,
@@ -57,7 +113,7 @@ class AnalyticsStore:
             "exercise_id": exercise_id,
             "project_id": project_id,
             "user_id": user_id,
-            "meta": meta or {},
+            "meta": _bound_meta(meta),
         }
         with self._lock:
             rows = self._read()

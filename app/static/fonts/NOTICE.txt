@@ -1,0 +1,10 @@
+Syne
+Copyright 2017 The Syne Project Authors (https://github.com/bonjour-monde/syne)
+Licensed under the SIL Open Font License, Version 1.1.
+
+IBM Plex Mono
+Copyright 2017 IBM Corp.
+Licensed under the SIL Open Font License, Version 1.1.
+
+The latin woff2 files in this directory are subsets of those families,
+packaged for first-party hosting so the app does not load fonts from a CDN.

@@ -199,3 +199,100 @@ def test_curriculum_integrity():
                 missing_enrich.append(ex["id"])
     assert not missing_iv, f"projects missing interview: {missing_iv}"
     assert not missing_enrich, f"exercises missing enrichment: {missing_enrich}"
+
+
+def test_local_project_hides_check_code(local_client):
+    exercise = local_client.get("/api/project/task-forge").json()["project"]["exercises"][0]
+    assert "check_code" not in exercise
+    assert exercise["starter_code"]
+    assert "mentor_debrief" in exercise
+
+
+def test_hosted_project_includes_check_code(hosted_client):
+    client, _ = hosted_client
+    exercise = client.get("/api/project/task-forge").json()["project"]["exercises"][0]
+    assert exercise.get("check_code")
+
+
+def test_csp_fonts_stay_on_self(local_client):
+    csp = local_client.get("/healthz").headers["content-security-policy"]
+    assert "font-src 'self'" in csp
+    assert "fonts.googleapis.com" not in csp
+
+
+def test_app_shell_revalidates(local_client):
+    assert local_client.get("/").headers["cache-control"] == "no-cache"
+    assert local_client.get("/static/app.js").headers["cache-control"] == "no-cache"
+
+
+def test_child_logger_gets_request_id():
+    import io
+    import logging
+
+    from main import RequestIdFilter, configure_logging
+
+    configure_logging()
+    root = logging.getLogger()
+    handler = next(h for h in root.handlers if getattr(h, "_dataforged", False))
+    assert any(isinstance(f, RequestIdFilter) for f in handler.filters)
+    buf = io.StringIO()
+    previous = handler.stream
+    handler.stream = buf
+    try:
+        logging.getLogger("dataforged.probe").info("booted")
+    finally:
+        handler.stream = previous
+    text = buf.getvalue()
+    assert "req=-" in text
+    assert "booted" in text
+
+
+def test_rate_limiter_reuses_connection(tmp_path, monkeypatch):
+    import sqlite3
+
+    import ratelimit
+
+    calls = {"n": 0}
+    real = sqlite3.connect
+
+    def wrapped(*args, **kwargs):
+        calls["n"] += 1
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(ratelimit.sqlite3, "connect", wrapped)
+    limiter = ratelimit.RateLimiter(path=tmp_path / "rl.sqlite3", limit=10)
+    assert limiter.allow("1.1.1.1")
+    assert limiter.allow("1.1.1.1")
+    assert calls["n"] == 1
+    limiter.close()
+
+
+def test_safe_next_path_rejects_offsite(monkeypatch):
+    from urllib.parse import parse_qs, urlparse
+
+    from fastapi import FastAPI
+
+    monkeypatch.setenv("DATAFORGED_MODE", "hosted")
+    monkeypatch.setenv("SECRET_KEY", "unit-test-secret")
+    monkeypatch.setenv("GITHUB_CLIENT_ID", "cid")
+    monkeypatch.setenv("GITHUB_CLIENT_SECRET", "sec")
+    monkeypatch.setenv("BASE_URL", "http://localhost:8000")
+    for mod in ("config", "auth"):
+        sys.modules.pop(mod, None)
+    import auth
+
+    assert auth.safe_next_path("//evil.example") == "/"
+    assert auth.safe_next_path("/\\evil.example") == "/"
+    assert auth.safe_next_path("https://evil.example") == "/"
+    assert auth.safe_next_path("/projects") == "/projects"
+
+    mini = FastAPI()
+    mini.include_router(auth.router)
+    client = TestClient(mini, follow_redirects=False)
+    blocked = client.get("/auth/login", params={"next": "//evil.example/phish"})
+    assert blocked.status_code == 307
+    state = parse_qs(urlparse(blocked.headers["location"]).query)["state"][0]
+    assert auth._state_signer.loads(state)["next"] == "/"
+    allowed = client.get("/auth/login", params={"next": "/workspace"})
+    state = parse_qs(urlparse(allowed.headers["location"]).query)["state"][0]
+    assert auth._state_signer.loads(state)["next"] == "/workspace"

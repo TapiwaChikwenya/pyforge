@@ -67,7 +67,9 @@ flowchart TD
 
 ## Performance considerations
 
-- Analytics capped at last 5000 events on disk.
+- Analytics capped at last 5000 events on disk. Event `meta` is scalars only, capped in size, and rejected over 8 KB.
+- The analytics file is replaced atomically.
+- `exercise_open` is recorded when an exercise is expanded, not once per exercise when the tab renders.
 - Review queue computed in-process from curriculum (no heavy queries).
 
 ## Troubleshooting
@@ -76,7 +78,11 @@ flowchart TD
 |---------|-------|
 | No onboarding card | `localStorage.dataforged_onboarding_v1 === '1'` — clear it |
 | Mentor never unlocks | Fail the check 3 times (not syntax-only editor edits) |
-| Friction empty | Run exercises; events write to `app/data/analytics.json` |
+| Friction empty | Run or expand an exercise; events write to `app/data/analytics.json` |
+| Friction opens look identical across a project | An old build counted every exercise when the tab rendered. Rebuild the app image |
+| Path percent with 0 exercises | Milestones count too. The header and hero list both totals |
+| Dashboard still says Start first hour | Onboarding flag is unset (`localStorage.dataforged_onboarding_v1`). After it is set, the button is Resume or Continue |
+| Editor resets or Run checks old code after a tab change | The exercises tab must rebuild CodeMirror from the in-memory draft. Hard-refresh if a stale `app.js` is cached |
 | Solutions 403 | Pass the exercise first |
 
 ## Test commands

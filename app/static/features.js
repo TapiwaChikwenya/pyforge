@@ -116,15 +116,26 @@ function resolveResume(cur) {
   };
 }
 
+function nextIncomplete(cur) {
+  const projects = (cur && cur.projects) || [];
+  return projects.find(p => (p.exercises_done || 0) < (p.exercises_total || 0)) || projects[0] || null;
+}
+
 function dashboardHeroCtaHtml(cur) {
   const resume = resolveResume(cur);
   const fh = cur && cur.first_hour;
   const stats = (cur && cur.stats) || {};
-  const primary = resume
-    ? `<button type="button" class="cta-primary" onclick="resumeLearning()">Resume ${escapeHtml(resume.project_title)}${resume.exercise_title ? ' · ' + escapeHtml(resume.exercise_title) : ''} ▸</button>`
-    : (fh && !Onboarding.done()
-      ? `<button type="button" class="cta-primary" onclick="startFirstHour()">Start first hour ▸</button>`
-      : `<button type="button" class="cta-primary" onclick="startFirstHour()">Start first hour ▸</button>`);
+  let primary;
+  if (resume) {
+    primary = `<button type="button" class="cta-primary" onclick="resumeLearning()">Resume ${escapeHtml(resume.project_title)}${resume.exercise_title ? ' · ' + escapeHtml(resume.exercise_title) : ''} ▸</button>`;
+  } else if (fh && !Onboarding.done()) {
+    primary = `<button type="button" class="cta-primary" onclick="startFirstHour()">Start first hour ▸</button>`;
+  } else {
+    const nxt = nextIncomplete(cur);
+    const title = nxt ? escapeHtml(nxt.title) : 'learning';
+    const pid = nxt ? nxt.id : '';
+    primary = `<button type="button" class="cta-primary" onclick="showProject('${pid}')">Continue ${title} ▸</button>`;
+  }
   const secondary = resume && fh
     ? `<button type="button" class="cta-secondary" onclick="startFirstHour()">First hour</button>`
     : `<button type="button" class="cta-secondary" onclick="showReviewDesk()">Review desk</button>`;
@@ -143,7 +154,7 @@ function dashboardHeroCtaHtml(cur) {
         </div>
       </details>
     </div>
-    <p class="tool-meta" style="margin-top:12px">${stats.pct || 0}% path · ${stats.exercises_done || 0}/${stats.exercises_total || 0} exercises</p>`;
+    <p class="tool-meta" style="margin-top:12px">${stats.pct || 0}% · ${stats.exercises_done || 0}/${stats.exercises_total || 0} exercises · ${stats.milestones_done || 0}/${stats.milestones_total || 0} milestones</p>`;
 }
 
 function dismissOnboarding() {
@@ -154,14 +165,10 @@ function dismissOnboarding() {
 
 async function openExerciseInProject(pid, eid) {
   await showProject(pid);
-  switchTab('exercises');
+  switchTab('exercises', eid || undefined);
   if (!eid) return;
   const ex = document.getElementById('ex-' + eid);
   if (ex) {
-    document.querySelectorAll('.ex').forEach(n => n.classList.remove('open'));
-    ex.classList.add('open');
-    // Build (or re-measure) this exercise's editor now that it is the visible
-    // one — see ensureEditor() in app.js for why it cannot happen while hidden.
     requestAnimationFrame(() => window.ensureEditor && window.ensureEditor(eid));
     ex.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -178,7 +185,13 @@ async function resumeLearning() {
 }
 
 async function startFirstHour() {
-  const fh = (curriculum && curriculum.first_hour) || await api.get('/api/onboarding');
+  let fh;
+  try {
+    fh = (curriculum && curriculum.first_hour) || await api.get('/api/onboarding');
+  } catch (e) {
+    banner(escapeHtml(e.message || 'Could not start the first hour'), true);
+    return;
+  }
   Onboarding.complete();
   track('onboarding_start', { project_id: fh.project_id, exercise_id: fh.exercise_id });
   ResumeState.save({ project_id: fh.project_id, exercise_id: fh.exercise_id });
@@ -193,9 +206,18 @@ function enhanceDashboardHtml(html) {
 /* ---------- portfolio ---------- */
 async function showPortfolioDesk() {
   track('portfolio_export');
-  const data = (isHosted() && !STATE.user)
-    ? await api.post('/api/portfolio', { progress: LocalProgress.read() })
-    : await api.get('/api/portfolio');
+  let data;
+  try {
+    data = (isHosted() && !STATE.user)
+      ? await api.post('/api/portfolio', { progress: LocalProgress.read() })
+      : await api.get('/api/portfolio');
+  } catch (e) {
+    destroyEditors();
+    $main.innerHTML = `<button class="back" onclick="showDashboard()">← Back to the path</button>
+      <div class="panel">Could not build the portfolio. ${escapeHtml(e.message || e)}</div>`;
+    return;
+  }
+  destroyEditors();
   $main.innerHTML = `
     <button class="back" onclick="showDashboard()">← Back to the path</button>
     <div class="hero">
@@ -219,7 +241,15 @@ function escapeHtml(s) {
 /* ---------- spaced review ---------- */
 async function showReviewDesk() {
   track('review_open');
-  const out = await api.post('/api/review', { review_state: ReviewState.get() });
+  let out;
+  try {
+    out = await api.post('/api/review', { review_state: ReviewState.get() });
+  } catch (e) {
+    destroyEditors();
+    $main.innerHTML = `<button class="back" onclick="showDashboard()">← Back to the path</button>
+      <div class="panel">Could not load the review desk. ${escapeHtml(e.message || e)}</div>`;
+    return;
+  }
   const items = out.items || [];
   let body;
   if (!items.length) {
@@ -253,6 +283,7 @@ async function showReviewDesk() {
       </div>`;
     }).join('');
   }
+  destroyEditors();
   $main.innerHTML = `
     <button class="back" onclick="showDashboard()">← Back to the path</button>
     <div class="hero">
@@ -279,7 +310,15 @@ async function openReviewExercise(pid, eid) {
 
 /* ---------- friction analytics ---------- */
 async function showFrictionDesk() {
-  const out = await api.get('/api/analytics/friction?limit=10');
+  let out;
+  try {
+    out = await api.get('/api/analytics/friction?limit=10');
+  } catch (e) {
+    destroyEditors();
+    $main.innerHTML = `<button class="back" onclick="showDashboard()">← Back to the path</button>
+      <div class="panel">Could not load the friction report. ${escapeHtml(e.message || e)}</div>`;
+    return;
+  }
   const items = out.items || [];
   const rows = items.length ? items.map((it, i) => `
     <tr>
@@ -290,7 +329,8 @@ async function showFrictionDesk() {
       <td>${it.passes}</td>
       <td>${Math.round((it.fail_rate || 0) * 100)}%</td>
       <td>${it.drop_score}</td>
-    </tr>`).join('') : `<tr><td colspan="7">No analytics yet — run a few exercises first.</td></tr>`;
+    </tr>`).join('')     : `<tr><td colspan="7">No analytics yet — run a few exercises first.</td></tr>`;
+  destroyEditors();
   $main.innerHTML = `
     <button class="back" onclick="showDashboard()">← Back to the path</button>
     <div class="hero">

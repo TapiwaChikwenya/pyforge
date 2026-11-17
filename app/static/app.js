@@ -5,6 +5,29 @@
 const $main = document.getElementById('main');
 let curriculum = null;      // /api/curriculum payload
 const editors = {};         // exercise_id -> CodeMirror instance
+const drafts = {};          // exercise_id -> last code, survives tab rebuilds
+let exerciseObserver = null;
+
+function destroyEditors() {
+  /* Snapshot code, then drop CodeMirror instances before their DOM is replaced.
+     A cached instance whose wrapper was removed still answers getValue(), so
+     Run would grade hidden text while the new textarea showed the starter. */
+  if (exerciseObserver) {
+    exerciseObserver.disconnect();
+    exerciseObserver = null;
+  }
+  for (const id of Object.keys(editors)) {
+    const cm = editors[id];
+    try {
+      if (cm && typeof cm.getValue === 'function') drafts[id] = cm.getValue();
+    } catch (e) { /* detached editor: keep the previous draft */ }
+    try {
+      if (cm && typeof cm.toTextArea === 'function') cm.toTextArea();
+    } catch (e) { /* wrapper already gone */ }
+    delete editors[id];
+  }
+}
+window.destroyEditors = destroyEditors;
 
 /* Graceful degradation if CDN scripts are unavailable (e.g. offline):
    - md(): fall back from marked to simple paragraph/bold rendering
@@ -140,26 +163,45 @@ function makeEditor(textarea) {
    *underneath* the line numbers. Creating lazily (and refreshing on reveal) is
    the only reliable fix. */
 function ensureEditor(id) {
-  if (editors[id]) {
-    editors[id].refresh();
+  const existing = editors[id];
+  if (existing && existing.getWrapperElement && existing.getWrapperElement().isConnected) {
+    existing.refresh();
     // Re-arm the layout guard: this editor may have been measured while its
     // container was hidden, and revealing it is exactly when that shows up.
-    if (editors[id].getWrapperElement) guardEditor(editors[id]);
-    return editors[id];
+    guardEditor(existing);
+    return existing;
   }
+  if (existing) delete editors[id];
   const ta = document.getElementById('code-' + id);
   if (!ta) return null;                                   // local-only exercise
   const ex = current && current.project.exercises.find(e => e.id === id);
-  if (ex && !ta.value) ta.value = ex.starter_code;
+  if (Object.prototype.hasOwnProperty.call(drafts, id)) ta.value = drafts[id];
+  else if (ex && !ta.value) ta.value = ex.starter_code;
   editors[id] = makeEditor(ta);
   return editors[id];
 }
 
+async function readApi(response) {
+  let data = null;
+  const text = await response.text();
+  if (text) {
+    try { data = JSON.parse(text); } catch (e) { data = null; }
+  }
+  if (!response.ok) {
+    const detail = data && data.detail;
+    const message = typeof detail === 'string' ? detail : ('request failed (' + response.status + ')');
+    const err = new Error(message);
+    err.status = response.status;
+    throw err;
+  }
+  return data;
+}
+
 const api = {
-  get: (u) => fetch(u, { credentials: 'same-origin' }).then(r => r.json()),
+  get: (u) => fetch(u, { credentials: 'same-origin' }).then(readApi),
   post: (u, body) => fetch(u, { method: 'POST', credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body) }).then(r => r.json()),
+    body: JSON.stringify(body) }).then(readApi),
 };
 
 /* ============================================================
@@ -385,7 +427,14 @@ function toggleStage(idx) {
 }
 
 async function showDashboard() {
-  const payload = await api.get('/api/curriculum');
+  let payload;
+  try {
+    payload = await api.get('/api/curriculum');
+  } catch (e) {
+    destroyEditors();
+    $main.innerHTML = `<div class="panel">Could not load the path. ${escapeHtml(e.message || e)}</div>`;
+    return;
+  }
   // Read the mode BEFORE overlaying local progress — applyLocalProgress needs
   // to know we're hosted, and STATE starts out assuming local mode.
   STATE.mode = payload.mode || 'local';
@@ -406,7 +455,7 @@ async function showDashboard() {
   let html = `
     <section class="dash-hero" aria-label="Start here">
       <div class="dash-kicker">Data engineering path</div>
-      <div class="brand-lockup">Py<em>Forge</em></div>
+      <div class="brand-lockup">Data<em>Forged</em></div>
       <p class="lead">Build real systems — Python to Spark to Airflow — with instant checks and interview drills.</p>
       ${heroCta}
     </section>
@@ -431,6 +480,7 @@ async function showDashboard() {
   });
   html += `</div>`;
 
+  destroyEditors();
   $main.innerHTML = html;
   // Always explain the hosted setup \u2014 including when sign-in is unavailable,
   // so nobody is left wondering where the login button went.
@@ -446,20 +496,35 @@ async function showDashboard() {
   window.scrollTo(0, 0);
 }
 
+function pathCounts() {
+  const prog = (curriculum && curriculum.progress) || { exercises: {}, milestones: {} };
+  const passed = prog.exercises || {};
+  const milestones = prog.milestones || {};
+  let exDone = 0, exTotal = 0, msDone = 0, msTotal = 0;
+  for (const p of (curriculum && curriculum.projects) || []) {
+    exTotal += p.exercises_total || 0;
+    msTotal += p.milestones_total || 0;
+    exDone += (p.exercise_ids || []).filter(id => passed[id]).length;
+    msDone += Math.min((milestones[p.id] || []).length, p.milestones_total || 0);
+  }
+  const total = exTotal + msTotal;
+  return {
+    exDone, exTotal, msDone, msTotal,
+    pct: total ? Math.round((exDone + msDone) / total * 100) : 0,
+  };
+}
+
 function updateHeader() {
   if (!curriculum) return;
-  const prog = curriculum.progress || { exercises: {}, milestones: {} };
-  let done = 0, total = 0;
-  for (const p of curriculum.projects) {
-    total += p.exercises_total + p.milestones_total;
-    done += (prog.milestones[p.id] || []).length;
-  }
-  done += Object.keys(prog.exercises || {}).length;
-  const pct = total ? Math.round(done / total * 100) : 0;
-  document.getElementById('hdr-bar').style.width = pct + '%';
-  document.getElementById('hdr-count').textContent = `${pct}% of the path`;
+  const c = pathCounts();
+  const label = `${c.pct}% · ${c.exDone}/${c.exTotal} exercises · ${c.msDone}/${c.msTotal} milestones`;
+  document.getElementById('hdr-bar').style.width = c.pct + '%';
+  document.getElementById('hdr-count').textContent = label;
   const bar = document.querySelector('.header-progress .bar');
-  if (bar) bar.setAttribute('aria-valuenow', String(pct));
+  if (bar) {
+    bar.setAttribute('aria-valuenow', String(c.pct));
+    bar.setAttribute('aria-valuetext', label);
+  }
 }
 
 /* Header progress after a change, without a full dashboard reload. */
@@ -524,7 +589,16 @@ async function maybeMergeLocalProgress() {
 let current = null;   // { project, exercises_passed, milestones_done }
 
 async function showProject(pid) {
-  current = await api.get('/api/project/' + pid);
+  let detail;
+  try {
+    detail = await api.get('/api/project/' + encodeURIComponent(pid));
+  } catch (e) {
+    destroyEditors();
+    $main.innerHTML = `<button class="back" onclick="showDashboard()">← Back to the path</button>
+      <div class="panel">${escapeHtml(e.message || e)}</div>`;
+    return;
+  }
+  current = detail;
   // Anonymous hosted visitors keep progress in the browser, not on the server.
   if (isHosted() && !STATE.user) {
     const local = LocalProgress.read();
@@ -545,6 +619,7 @@ async function showProject(pid) {
     ? `Base stack only — <code>${p.environment.command}</code>`
     : `This project needs a higher stack tier (${tier}). Start it when you reach the Environment tab: <code>${p.environment.command}</code>`;
   const tech = (p.tech || []).slice(0, 4);
+  destroyEditors();
   $main.innerHTML = `
     <button class="back" onclick="showDashboard()">← Back to the path</button>
     <div class="proj-head">
@@ -571,7 +646,8 @@ async function showProject(pid) {
   window.scrollTo(0, 0);
 }
 
-function switchTab(name) {
+function switchTab(name, openExerciseId) {
+  destroyEditors();
   document.querySelectorAll('.tab').forEach(t => {
     const on = t.dataset.tab === name;
     t.classList.toggle('active', on);
@@ -636,8 +712,11 @@ function switchTab(name) {
 
   } else if (name === 'exercises') {
     const F = window.DataForgedFeatures;
-    el.innerHTML = p.exercises.map((ex, i) => `
-      <div class="ex ${current.exercises_passed[ex.id] ? 'passed' : ''} ${i === 0 ? 'open' : ''}" id="ex-${ex.id}">
+    const openId = (openExerciseId && p.exercises.some(e => e.id === openExerciseId))
+      ? openExerciseId
+      : (p.exercises[0] && p.exercises[0].id);
+    el.innerHTML = p.exercises.map((ex) => `
+      <div class="ex ${current.exercises_passed[ex.id] ? 'passed' : ''} ${ex.id === openId ? 'open' : ''}" id="ex-${ex.id}">
         <div class="ex-head" role="button" tabindex="0" onclick="toggleEx('${ex.id}')"
              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleEx('${ex.id}')}">
           <div class="status" aria-hidden="true"></div>
@@ -703,12 +782,16 @@ function switchTab(name) {
     for (const ex of p.exercises) {
       if (localOnly(ex)) continue;
       const ta = document.getElementById('code-' + ex.id);
-      if (ta) ta.value = ex.starter_code;
-      hintsShown[ex.id] = 0;
-      if (F) {
-        F.track('exercise_open', { exercise_id: ex.id, project_id: p.id });
-        if (current.exercises_passed[ex.id]) F.loadCommunitySolutions(ex.id);
+      if (ta) {
+        ta.value = Object.prototype.hasOwnProperty.call(drafts, ex.id)
+          ? drafts[ex.id]
+          : ex.starter_code;
       }
+      hintsShown[ex.id] = 0;
+      if (F && current.exercises_passed[ex.id]) F.loadCommunitySolutions(ex.id);
+    }
+    if (F && openId) {
+      F.track('exercise_open', { exercise_id: openId, project_id: p.id });
     }
     // The expanded exercise gets its editor on the next frame, once the browser
     // has laid the new markup out. The rest are built when they are opened.
@@ -719,14 +802,14 @@ function switchTab(name) {
     // Safety net: re-measure any editor that (re)enters the viewport, covering
     // reveals we did not route through toggleEx().
     if (window.IntersectionObserver) {
-      const io = new IntersectionObserver(entries => {
+      exerciseObserver = new IntersectionObserver(entries => {
         for (const e of entries) {
           if (!e.isIntersecting) continue;
           const id = e.target.id.replace('ex-', '');
           if (editors[id]) editors[id].refresh();
         }
       });
-      document.querySelectorAll('.ex').forEach(node => io.observe(node));
+      document.querySelectorAll('.ex').forEach(node => exerciseObserver.observe(node));
     }
     // Resume points at the first open exercise (or first in list).
     if (F && F.ResumeState && p.exercises.length) {
@@ -774,8 +857,13 @@ function toggleEx(id) {
   const node = document.getElementById('ex-' + id);
   const nowOpen = !node.classList.contains('open');
   node.classList.toggle('open', nowOpen);
-  if (nowOpen && window.DataForgedFeatures && window.DataForgedFeatures.ResumeState && current) {
-    window.DataForgedFeatures.ResumeState.save({ project_id: current.project.id, exercise_id: id });
+  if (nowOpen && window.DataForgedFeatures && current) {
+    if (window.DataForgedFeatures.ResumeState) {
+      window.DataForgedFeatures.ResumeState.save({ project_id: current.project.id, exercise_id: id });
+    }
+    window.DataForgedFeatures.track('exercise_open', {
+      exercise_id: id, project_id: current.project.id,
+    });
   }
   // Create on first open, re-measure on later ones — on the next frame, so the
   // browser has applied the class and the element is genuinely visible.
@@ -784,8 +872,10 @@ function toggleEx(id) {
 
 function resetExercise(id) {
   const ex = current.project.exercises.find(e => e.id === id);
+  delete drafts[id];
   const ed = ensureEditor(id);
   if (ed) ed.setValue(ex.starter_code);
+  drafts[id] = ex.starter_code;
   const res = document.getElementById('res-' + id);
   res.className = 'result';
 }
@@ -853,17 +943,29 @@ async function recordExercise(id, passed) {
 
 async function toggleMilestone(i, node) {
   const nowDone = !node.classList.contains('done');
+  const box = node.querySelector('.box');
   node.classList.toggle('done', nowDone);
-  node.querySelector('.box').textContent = nowDone ? '✓' : '';
+  box.textContent = nowDone ? '✓' : '';
+  const prior = node.querySelector('.milestone-error');
+  if (prior) prior.remove();
 
-  if (isHosted() && !STATE.user) {
-    current.milestones_done = LocalProgress.setMilestone(current.project.id, i, nowDone);
-  } else {
-    const out = await api.post('/api/milestone', {
-      project_id: current.project.id, index: i, done: nowDone });
-    current.milestones_done = out.milestones_done || [];
+  try {
+    if (isHosted() && !STATE.user) {
+      current.milestones_done = LocalProgress.setMilestone(current.project.id, i, nowDone);
+    } else {
+      const out = await api.post('/api/milestone', {
+        project_id: current.project.id, index: i, done: nowDone });
+      current.milestones_done = out.milestones_done || [];
+    }
+    refreshHeaderProgress();
+  } catch (e) {
+    node.classList.toggle('done', !nowDone);
+    box.textContent = nowDone ? '' : '✓';
+    const note = document.createElement('div');
+    note.className = 'result err milestone-error';
+    note.textContent = e.message || 'Could not save this milestone';
+    node.appendChild(note);
   }
-  refreshHeaderProgress();
 }
 
 /* Tiny celebration: pulse the header bar */

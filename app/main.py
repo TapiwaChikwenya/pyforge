@@ -27,6 +27,7 @@ import logging
 import uuid
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
@@ -34,7 +35,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 import config
-from analytics_store import ALLOWED_EVENTS, get_analytics
+from analytics_store import ALLOWED_EVENTS, get_analytics, meta_too_large
 from community_solutions import solutions_for
 from curriculum import FIRST_HOUR, PROJECTS, PROJECTS_BY_ID, STAGE_LAYOUT
 from portfolio import build_certificate_html, build_portfolio_markdown, progress_stats
@@ -43,19 +44,36 @@ from ratelimit import RateLimiter, client_ip
 from review import build_review_queue
 from store import PostgresStore, build_store
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s [%(name)s] req=%(request_id)s %(message)s",
-)
-# Default filter so non-request log records still format cleanly.
-class _RequestIdFilter(logging.Filter):
+class RequestIdFilter(logging.Filter):
+    """Fill request_id on the handler, so child loggers format cleanly.
+
+    Logger filters do not run for records that propagate from a child.
+    The formatter lives on the handler, so the default has to be applied there.
+    """
+
     def filter(self, record: logging.LogRecord) -> bool:
         if not hasattr(record, "request_id"):
             record.request_id = "-"
         return True
 
 
-logging.getLogger().addFilter(_RequestIdFilter())
+def configure_logging() -> None:
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    fmt = logging.Formatter(
+        "%(asctime)s %(levelname)s [%(name)s] req=%(request_id)s %(message)s"
+    )
+    handler = next((h for h in root.handlers if getattr(h, "_dataforged", False)), None)
+    if handler is None:
+        handler = logging.StreamHandler()
+        handler._dataforged = True  # type: ignore[attr-defined]
+        root.addHandler(handler)
+    handler.setFormatter(fmt)
+    if not any(isinstance(f, RequestIdFilter) for f in handler.filters):
+        handler.addFilter(RequestIdFilter())
+
+
+configure_logging()
 log = logging.getLogger("dataforged")
 
 app = FastAPI(title="DataForged", docs_url="/api/docs")
@@ -109,7 +127,7 @@ async def _guard(request: Request, call_next):
                 )
             from fastapi.responses import RedirectResponse
 
-            nxt = request.url.path if request.url.path.startswith("/") else "/"
+            nxt = quote(auth_mod.safe_next_path(request.url.path), safe="/")
             return RedirectResponse(f"/auth/login?next={nxt}", status_code=303)
 
     if request.method == "POST":
@@ -136,12 +154,19 @@ async def _guard(request: Request, call_next):
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net "
         "https://cdnjs.cloudflare.com; "
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
+        "font-src 'self'; "
         "img-src 'self' data: https:; "
         "connect-src 'self' https://cdn.jsdelivr.net; "
         "worker-src 'self' blob:; "
         "frame-ancestors 'none'; "
         "base-uri 'self'",
     )
+    path = request.url.path
+    if path.startswith("/static/fonts/") and path.endswith(".woff2"):
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif path == "/" or path.startswith("/static/"):
+        # Revalidate app shell files so a rebuild is not stuck behind a stale script.
+        response.headers["Cache-Control"] = "no-cache"
     return response
 
 
@@ -169,6 +194,21 @@ def _require_user(request: Request) -> int:
     if uid is None:
         raise HTTPException(401, "sign in to save progress across devices")
     return uid
+
+
+def _project_for_client(project: dict[str, Any]) -> dict[str, Any]:
+    """Hosted mode includes check_code because Pyodide grades in the browser.
+
+    Local mode grades on the server, so the grader source stays there.
+    """
+    if config.HOSTED:
+        return project
+    exported = dict(project)
+    exported["exercises"] = [
+        {key: value for key, value in exercise.items() if key != "check_code"}
+        for exercise in project["exercises"]
+    ]
+    return exported
 
 
 def _auth_usable(request: Request) -> bool:
@@ -275,7 +315,7 @@ def get_project(pid: str, request: Request) -> dict[str, Any]:
         raise HTTPException(404, "unknown project")
     progress = _progress_for(request)
     return {
-        "project": p,
+        "project": _project_for_client(p),
         "exercises_passed": {
             e["id"]: bool(progress["exercises"].get(e["id"])) for e in p["exercises"]
         },
@@ -399,6 +439,8 @@ def certificate(request: Request) -> Response:
 def analytics_event(req: AnalyticsEvent, request: Request) -> dict[str, Any]:
     if req.event not in ALLOWED_EVENTS:
         raise HTTPException(400, "unknown event")
+    if meta_too_large(req.meta):
+        raise HTTPException(400, "meta too large")
     if req.exercise_id and req.exercise_id not in KNOWN_EXERCISE_IDS:
         raise HTTPException(404, "unknown exercise")
     if req.project_id and req.project_id not in PROJECTS_BY_ID:

@@ -138,3 +138,38 @@ def test_solutions_are_rendered_inside_the_exercise_body():
     ex_body = app_js.split('<div class="ex-body">', 1)
     assert len(ex_body) == 2, "exercise markup no longer contains .ex-body"
     assert "solutionsSlotHtml(ex)" in ex_body[1], "solutions slot moved out of .ex-body"
+
+
+def test_editors_are_rebuilt_from_drafts():
+    js = _read("app.js")
+    assert "function destroyEditors()" in js
+    tab = js.split("function switchTab", 1)[1].split("function toggleEx", 1)[0]
+    assert "destroyEditors()" in tab
+    seed = tab.split("for (const ex of p.exercises)", 1)[1].split("if (F && openId)", 1)[0]
+    assert "exercise_open" not in seed
+    assert "drafts" in seed
+    assert "exercise_open" in tab.split("if (F && openId)", 1)[1]
+
+
+def test_dashboard_cta_and_progress_are_explicit():
+    js = _read("features.js")
+    assert "Continue ${title}" in js
+    assert "Onboarding.done()" in js
+    assert js.count("Start first hour") == 1
+    assert "exercises ·" in js and "milestones" in js
+
+
+def test_fonts_are_self_hosted():
+    html = _read("index.html")
+    assert "fonts.googleapis.com" not in html
+    assert "/static/fonts.css" in html
+    font_dir = STATIC / "fonts"
+    names = {path.name for path in font_dir.glob("*.woff2")}
+    assert "syne-latin-800.woff2" in names
+    assert "ibm-plex-mono-latin-400.woff2" in names
+    css = _read("fonts.css")
+    for name in names:
+        assert name in css
+    brand = _read("app.js")
+    assert "Data<em>Forged</em>" in brand
+    assert "Py<em>Forge</em>" not in brand

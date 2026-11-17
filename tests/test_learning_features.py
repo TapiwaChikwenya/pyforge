@@ -107,3 +107,32 @@ def test_stack_tiers_present(client):
     tiers = {p["stack_tier"] for p in cur["projects"]}
     assert "light" in tiers
     assert "db" in tiers or "spark" in tiers or "full" in tiers
+
+
+def test_analytics_rejects_huge_meta(client):
+    response = client.post("/api/analytics/event", json={
+        "event": "exercise_open",
+        "exercise_id": "tf-1",
+        "meta": {"blob": "x" * 9000},
+    })
+    assert response.status_code == 400
+
+
+def test_analytics_bounds_meta_and_replaces_atomically(tmp_path):
+    import json
+
+    from analytics_store import AnalyticsStore
+
+    store = AnalyticsStore(tmp_path / "a.json")
+    store.record(
+        "project_open",
+        meta={"ok": "hi", "nested": {"a": 1}, "big": "y" * 1000},
+    )
+    row = json.loads((tmp_path / "a.json").read_text(encoding="utf-8"))[0]
+    assert row["meta"]["ok"] == "hi"
+    assert "nested" not in row["meta"]
+    assert len(row["meta"]["big"]) <= 200
+    assert list(tmp_path.glob(".analytics-*")) == []
+    store.record("resume_open", project_id="task-forge")
+    events = [item["event"] for item in json.loads((tmp_path / "a.json").read_text(encoding="utf-8"))]
+    assert events == ["project_open", "resume_open"]

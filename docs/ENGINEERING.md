@@ -56,8 +56,12 @@ flowchart LR
 
 - Hosted: no `/api/run`; progress is honor-system (see DEPLOY.md)
 - `ALLOW_ANONYMOUS=false` forces GitHub sign-in for UI/API
+- OAuth `next` is a same-origin path. `//host` and backslash forms become `/`
+- Local `/api/project` omits `check_code`. Hosted mode keeps it for Pyodide
 - Local runner: env scrub, isolated cwd, POSIX rlimits — residual Docker-network access is intentional
-- CSP baseline set in app middleware; Caddy may tighten further
+- CSP baseline set in app middleware (`font-src 'self'`). Fonts are files under `app/static/fonts/`. Caddy may tighten further
+- Rate limit uses one SQLite connection per process, shared by a lock
+- Log lines include `req=`; the default is applied on the handler so child loggers format
 
 ## Performance considerations
 
@@ -111,3 +115,4 @@ emitting `<pre><code>` inside `.sol-card`.
 | Backup cron silent | `/var/log/dataforged-backup.log` on the EC2 host |
 | Code snippet renders as plain text in the UI | Its container is missing from the scoped `pre` / `code` selector groups in `app.css` — run `pytest tests/test_frontend_assets.py` |
 | Editor lines get boxes/padding | A broad `.ex-body pre` style crept back in; the same test catches it |
+| UI still shows the previous build | App shell files send `Cache-Control: no-cache`. Hard-refresh once if the browser kept an older script |

@@ -39,6 +39,20 @@ GITHUB_AUTHORIZE = "https://github.com/login/oauth/authorize"
 GITHUB_TOKEN = "https://github.com/login/oauth/access_token"
 GITHUB_USER = "https://api.github.com/user"
 
+
+def safe_next_path(raw: str | None) -> str:
+    """Same-origin path only. Reject protocol-relative and backslash redirects."""
+    if not raw or not isinstance(raw, str):
+        return "/"
+    path = raw.strip()
+    if not path.startswith("/") or path.startswith("//") or path.startswith("/\\"):
+        return "/"
+    if "\\" in path or "://" in path:
+        return "/"
+    if any(ord(ch) < 32 or ch == " " for ch in path):
+        return "/"
+    return path
+
 _FALLBACK_DB = Path(__file__).parent / "data" / "oauth_state.sqlite3"
 _fallback_lock = threading.Lock()
 
@@ -104,9 +118,7 @@ def login(request: Request, next: str = "/") -> RedirectResponse:
     if not config.AUTH_ENABLED:
         raise HTTPException(503, "sign-in is not configured on this deployment")
     nonce = secrets.token_urlsafe(16)
-    state = _state_signer.dumps(
-        {"n": nonce, "next": next if next.startswith("/") else "/"}
-    )
+    state = _state_signer.dumps({"n": nonce, "next": safe_next_path(next)})
     params = {
         "client_id": config.GITHUB_CLIENT_ID,
         "redirect_uri": f"{config.BASE_URL}/auth/callback",
@@ -172,7 +184,7 @@ def callback(request: Request, code: str = "", state: str = "") -> RedirectRespo
     )
     log.info("user signed in login=%s", user.get("login"))
 
-    response = RedirectResponse(payload.get("next", "/"), status_code=303)
+    response = RedirectResponse(safe_next_path(str(payload.get("next") or "/")), status_code=303)
     _set_session(response, user["id"])
     return response
 
