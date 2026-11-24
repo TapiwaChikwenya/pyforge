@@ -62,7 +62,7 @@ flowchart TD
 ## Security considerations
 
 - Certificate and portfolio are explicitly honor-system on hosted mode.
-- Community solutions require a pass (store) or anonymous `?passed=1` attest.
+- Community solutions require a stored pass, or a POST of sanitized anonymous local progress. `?passed=1` does not unlock them.
 - Mentor debrief never includes reference solution source.
 
 ## Performance considerations

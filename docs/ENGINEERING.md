@@ -56,7 +56,10 @@ flowchart LR
 
 - Hosted: no `/api/run`; progress is honor-system (see DEPLOY.md)
 - `ALLOW_ANONYMOUS=false` forces GitHub sign-in for UI/API
-- Local runner: env scrub, isolated cwd, POSIX rlimits — residual Docker-network access is intentional
+- Local runner: env scrub, isolated cwd, POSIX rlimits — residual Docker-network access is intentional. `/api/run` rejects code over 200k characters, matching lint.
+- OAuth `next` must be a same-origin path. `//host` and backslash forms are rewritten to `/` before the state cookie and again on callback.
+- Community solutions and the certificate for anonymous hosted learners use a POST of sanitized local progress. `GET /api/solutions/{id}?passed=1` is rejected.
+- Logout deletes the session cookie with the same `Secure` / `SameSite` flags used to set it.
 - CSP baseline set in app middleware; Caddy may tighten further
 
 ## Performance considerations

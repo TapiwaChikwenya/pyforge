@@ -20,7 +20,7 @@ import sqlite3
 import threading
 import time
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
@@ -99,13 +99,33 @@ def _consume_oauth_nonce(request: Request, nonce: str) -> bool:
     return _consume_nonce_fallback(nonce)
 
 
+def safe_next_path(next_path: str) -> str:
+    """Same-origin path only. Rejects protocol-relative URLs like ``//host``."""
+    if not isinstance(next_path, str):
+        return "/"
+    candidate = next_path.strip()
+    if (
+        not candidate.startswith("/")
+        or candidate.startswith("//")
+        or candidate.startswith("/\\")
+        or "\\" in candidate
+    ):
+        return "/"
+    if any(ch in candidate for ch in "\r\n\t"):
+        return "/"
+    parsed = urlparse(candidate)
+    if parsed.scheme or parsed.netloc:
+        return "/"
+    return candidate
+
+
 @router.get("/auth/login")
 def login(request: Request, next: str = "/") -> RedirectResponse:
     if not config.AUTH_ENABLED:
         raise HTTPException(503, "sign-in is not configured on this deployment")
     nonce = secrets.token_urlsafe(16)
     state = _state_signer.dumps(
-        {"n": nonce, "next": next if next.startswith("/") else "/"}
+        {"n": nonce, "next": safe_next_path(next)}
     )
     params = {
         "client_id": config.GITHUB_CLIENT_ID,
@@ -172,7 +192,7 @@ def callback(request: Request, code: str = "", state: str = "") -> RedirectRespo
     )
     log.info("user signed in login=%s", user.get("login"))
 
-    response = RedirectResponse(payload.get("next", "/"), status_code=303)
+    response = RedirectResponse(safe_next_path(str(payload.get("next") or "/")), status_code=303)
     _set_session(response, user["id"])
     return response
 
@@ -181,5 +201,11 @@ def callback(request: Request, code: str = "", state: str = "") -> RedirectRespo
 @router.post("/auth/logout")
 def logout() -> RedirectResponse:
     response = RedirectResponse("/", status_code=303)
-    response.delete_cookie(config.SESSION_COOKIE, path="/")
+    response.delete_cookie(
+        config.SESSION_COOKIE,
+        path="/",
+        secure=config.COOKIE_SECURE,
+        httponly=True,
+        samesite="lax",
+    )
     return response
