@@ -155,11 +155,24 @@ function ensureEditor(id) {
   return editors[id];
 }
 
+async function readApi(response) {
+  let body = {};
+  try { body = await response.json(); } catch (e) { body = {}; }
+  if (!response.ok) {
+    const detail = body && body.detail;
+    const message = typeof detail === 'string' ? detail : (response.statusText || 'request failed');
+    const err = new Error(message);
+    err.status = response.status;
+    throw err;
+  }
+  return body;
+}
+
 const api = {
-  get: (u) => fetch(u, { credentials: 'same-origin' }).then(r => r.json()),
+  get: (u) => fetch(u, { credentials: 'same-origin' }).then(readApi),
   post: (u, body) => fetch(u, { method: 'POST', credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body) }).then(r => r.json()),
+    body: JSON.stringify(body) }).then(readApi),
 };
 
 /* ============================================================
@@ -824,6 +837,12 @@ async function runExercise(id, heavy) {
     } else {
       res.className = 'result err';
       res.textContent = ((out.output ? out.output + '\n' : '') + (out.error || 'Failed')).trim();
+      if (current.exercises_passed && current.exercises_passed[id]) {
+        current.exercises_passed[id] = false;
+        const card = document.getElementById('ex-' + id);
+        if (card) card.classList.remove('passed');
+        await recordExercise(id, false);
+      }
       if (F) {
         F.ReviewState.bumpFail(id);
         F.track('exercise_fail', { exercise_id: id, project_id: current.project.id });

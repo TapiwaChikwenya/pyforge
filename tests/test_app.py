@@ -93,6 +93,46 @@ def test_run_endpoint_local(local_client):
     assert "passed" in r.json()
 
 
+def test_run_rejects_oversized_submission(local_client):
+    cur = local_client.get("/api/curriculum").json()
+    pid = cur["projects"][0]["id"]
+    detail = local_client.get(f"/api/project/{pid}").json()
+    ex = detail["project"]["exercises"][0]
+    r = local_client.post(
+        "/api/run",
+        json={"project_id": pid, "exercise_id": ex["id"], "code": "x" * 200_001},
+    )
+    assert r.status_code == 422
+
+
+def test_anonymous_certificate_uses_posted_progress(hosted_client):
+    client, _main = hosted_client
+    from progress_keys import KNOWN_EXERCISE_IDS
+
+    eid = next(iter(KNOWN_EXERCISE_IDS))
+    empty = client.get("/api/certificate")
+    assert empty.status_code == 200
+    assert "0 exercises" in empty.text
+    posted = client.post("/api/certificate", json={"progress": {"exercises": {eid: True}}})
+    assert posted.status_code == 200
+    assert "0 exercises" not in posted.text
+
+
+def test_solution_query_flag_does_not_unlock(hosted_client):
+    client, _main = hosted_client
+    from progress_keys import KNOWN_EXERCISE_IDS
+
+    eid = next(iter(KNOWN_EXERCISE_IDS))
+    denied = client.get(f"/api/solutions/{eid}?passed=1")
+    assert denied.status_code == 403
+    allowed = client.post(
+        f"/api/solutions/{eid}",
+        json={"progress": {"exercises": {eid: True}}},
+    )
+    assert allowed.status_code == 200
+    assert allowed.json()["unlocked"] is True
+
+
 def test_run_absent_in_hosted(hosted_client):
     client, _ = hosted_client
     r = client.post("/api/run", json={"project_id": "x", "exercise_id": "y", "code": ""})
@@ -141,6 +181,19 @@ def test_rate_limiter_blocks(tmp_path):
     assert rl.allow("1.2.3.4")
     assert not rl.allow("1.2.3.4")
     assert rl.allow("9.9.9.9")
+
+
+def test_safe_next_path_rejects_open_redirects(monkeypatch):
+    monkeypatch.setenv("SECRET_KEY", "unit-test-secret")
+    for mod in ("config", "auth"):
+        sys.modules.pop(mod, None)
+    import auth
+
+    assert auth.safe_next_path("/projects/task-forge") == "/projects/task-forge"
+    assert auth.safe_next_path("//evil.example/phish") == "/"
+    assert auth.safe_next_path("/\\evil.example") == "/"
+    assert auth.safe_next_path("https://evil.example") == "/"
+    assert auth.safe_next_path("projects") == "/"
 
 
 def test_session_cookie_roundtrip(monkeypatch):

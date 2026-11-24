@@ -191,11 +191,11 @@ def _current_user(request: Request) -> dict[str, Any] | None:
 class RunRequest(BaseModel):
     project_id: str
     exercise_id: str
-    code: str
+    code: str = Field(max_length=200_000)
 
 
 class LintRequest(BaseModel):
-    code: str
+    code: str = Field(max_length=200_000)
 
 
 class ExerciseProgress(BaseModel):
@@ -376,9 +376,16 @@ async def portfolio(request: Request) -> dict[str, Any]:
     }
 
 
-@app.get("/api/portfolio.md")
-def portfolio_download(request: Request) -> Response:
-    progress = _portfolio_progress(request)
+@app.api_route("/api/portfolio.md", methods=["GET", "POST"])
+async def portfolio_download(request: Request) -> Response:
+    client_progress = None
+    if request.method == "POST":
+        try:
+            body = await request.json()
+            client_progress = (body or {}).get("progress")
+        except Exception:  # noqa: BLE001
+            client_progress = None
+    progress = _portfolio_progress(request, client_progress)
     md = build_portfolio_markdown(progress, _current_user(request))
     return Response(
         content=md,
@@ -389,9 +396,25 @@ def portfolio_download(request: Request) -> Response:
     )
 
 
-@app.get("/api/certificate")
-def certificate(request: Request) -> Response:
-    html = build_certificate_html(_portfolio_progress(request), _current_user(request))
+@app.api_route("/api/certificate", methods=["GET", "POST"])
+async def certificate(request: Request) -> Response:
+    """Honor-system certificate.
+
+    Signed-in learners use server progress. Anonymous hosted learners POST the
+    same localStorage progress the portfolio desk already sends. A plain GET
+    has no browser storage, so it must not pretend those ticks exist.
+    """
+    client_progress = None
+    if request.method == "POST":
+        try:
+            body = await request.json()
+            client_progress = (body or {}).get("progress")
+        except Exception:  # noqa: BLE001
+            client_progress = None
+    html = build_certificate_html(
+        _portfolio_progress(request, client_progress),
+        _current_user(request),
+    )
     return Response(content=html, media_type="text/html; charset=utf-8")
 
 
@@ -426,20 +449,30 @@ def review_queue(req: ReviewRequest, request: Request) -> dict[str, Any]:
     return {"items": items, "count": len(items)}
 
 
-@app.get("/api/solutions/{exercise_id}")
-def community_solutions(exercise_id: str, request: Request) -> dict[str, Any]:
-    """Gated alternate solutions — only after the exercise is passed."""
+@app.api_route("/api/solutions/{exercise_id}", methods=["GET", "POST"])
+async def community_solutions(exercise_id: str, request: Request) -> dict[str, Any]:
+    """Gated alternate solutions — only after the exercise is passed.
+
+    Anonymous hosted progress lives in localStorage. The UI POSTs that blob,
+    which is sanitized the same way as the portfolio export. ``?passed=1`` is
+    not accepted: it is a cacheable GET anyone can call without a pass.
+    """
     if exercise_id not in KNOWN_EXERCISE_IDS:
         raise HTTPException(404, "unknown exercise")
-    progress = _progress_for(request)
-    passed = bool(progress.get("exercises", {}).get(exercise_id))
-    # Anonymous hosted progress lives in localStorage; UI attests with ?passed=1.
-    anon_attest = (
-        config.HOSTED
-        and _user_id(request) is None
-        and request.query_params.get("passed") == "1"
+    client_progress = None
+    if request.method == "POST":
+        try:
+            body = await request.json()
+            client_progress = (body or {}).get("progress")
+        except Exception:  # noqa: BLE001
+            client_progress = None
+    progress = (
+        _portfolio_progress(request, client_progress)
+        if client_progress is not None
+        else _progress_for(request)
     )
-    if not passed and not anon_attest:
+    passed = bool(progress.get("exercises", {}).get(exercise_id))
+    if not passed:
         raise HTTPException(403, "pass this exercise to unlock community solutions")
     sols = solutions_for(exercise_id)
     get_analytics().record(
@@ -470,8 +503,7 @@ if not config.HOSTED:
         result = run_exercise(
             req.code, exercise["check_code"], heavy=exercise.get("heavy", False)
         )
-        if result["passed"]:
-            request.app.state.store.set_exercise(None, req.exercise_id, True)
+        request.app.state.store.set_exercise(None, req.exercise_id, bool(result["passed"]))
         return result
 
     @app.post("/api/scratch")

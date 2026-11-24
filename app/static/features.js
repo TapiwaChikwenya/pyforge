@@ -204,12 +204,41 @@ async function showPortfolioDesk() {
          ${data.honor_system ? '<b>Hosted passes are browser-verified — not proctored.</b>' : ''}</p>
     </div>
     <div class="dash-toolbar">
-      <a class="tool-btn primary" href="/api/portfolio.md">Download README.md</a>
-      <a class="tool-btn" href="/api/certificate" target="_blank" rel="noopener">Open certificate</a>
+      <button class="tool-btn primary" onclick="downloadPortfolioFile('md')">Download README.md</button>
+      <button class="tool-btn" onclick="downloadPortfolioFile('certificate')">Open certificate</button>
       <button class="tool-btn" onclick="copyText(document.getElementById('pf-md').textContent).then(()=>alert('Copied'))">Copy markdown</button>
     </div>
     <div class="panel"><pre id="pf-md" class="portfolio-pre">${escapeHtml(data.markdown)}</pre></div>`;
   window.scrollTo(0, 0);
+}
+
+async function downloadPortfolioFile(kind) {
+  const anonymous = isHosted() && !STATE.user;
+  const path = kind === 'certificate' ? '/api/certificate' : '/api/portfolio.md';
+  const response = await fetch(path, anonymous
+    ? {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ progress: LocalProgress.read() }),
+      }
+    : { credentials: 'same-origin' });
+  if (!response.ok) {
+    alert('Could not build that file (' + response.status + ').');
+    return;
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  if (kind === 'certificate') {
+    window.open(url, '_blank', 'noopener');
+    return;
+  }
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'pyforge-portfolio.md';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 function escapeHtml(s) {
@@ -335,9 +364,10 @@ function solutionsSlotHtml(ex) {
 async function loadCommunitySolutions(exId) {
   const passed = !!(current && current.exercises_passed && current.exercises_passed[exId]);
   if (!passed) return;
-  const q = (isHosted() && !STATE.user) ? '?passed=1' : '';
   try {
-    const out = await api.get('/api/solutions/' + exId + q);
+    const out = (isHosted() && !STATE.user)
+      ? await api.post('/api/solutions/' + exId, { progress: LocalProgress.read() })
+      : await api.get('/api/solutions/' + exId);
     const el = document.getElementById('sols-' + exId);
     if (!el) return;
     if (!(out.solutions || []).length) {
