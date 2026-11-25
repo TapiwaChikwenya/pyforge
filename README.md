@@ -59,6 +59,7 @@ In hosted mode, exercise passes are **browser-verified** (honor system). The
 server validates known exercise IDs and requires sign-in for cross-device
 storage; it does **not** re-execute checks. Do not use checkmarks as
 certificates or leaderboard proof without a separate proctoring layer.
+Local mode records a pass only when `/api/run` checks succeed.
 Details: [DEPLOY.md](DEPLOY.md).
 
 ## License

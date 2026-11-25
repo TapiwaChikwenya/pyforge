@@ -110,7 +110,7 @@ emitting `<pre><code>` inside `.sol-card`.
 | 503 on `/healthz` | Postgres connectivity / `DATABASE_URL` |
 | Everyone signed out | `SECRET_KEY` changed / missing |
 | 401 on every API call | `ALLOW_ANONYMOUS=false` without a session |
-| 429 under ALB | `TRUST_PROXY=true` so limits key on real client IP |
+| 429 under ALB | `TRUST_PROXY=true` so limits key on the rightmost `X-Forwarded-For` hop (the address the proxy appended). The leftmost value is client-controlled. Set this only when the app is not reachable except through that proxy |
 | Backup cron silent | `/var/log/pyforge-backup.log` on the EC2 host |
 | Code snippet renders as plain text in the UI | Its container is missing from the scoped `pre` / `code` selector groups in `app.css` — run `pytest tests/test_frontend_assets.py` |
 | Editor lines get boxes/padding | A broad `.ex-body pre` style crept back in; the same test catches it |
