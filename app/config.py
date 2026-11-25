@@ -57,8 +57,10 @@ PROGRESS_HONOR_SYSTEM = True
 RATE_LIMIT_WRITES_PER_MINUTE = int(os.environ.get("RATE_LIMIT_WRITES_PER_MINUTE", "120"))
 RATE_LIMIT_DB = os.environ.get("RATE_LIMIT_DB", "")
 
-# When true (typical behind Caddy), trust X-Forwarded-For / X-Real-IP for the
-# client address used by the rate limiter.
+# When true (typical behind one reverse proxy), the rate limiter trusts the
+# rightmost X-Forwarded-For hop, then X-Real-IP. The leftmost hop is
+# client-controlled. Leave this false unless the app is reachable only
+# through that proxy.
 TRUST_PROXY = _bool("TRUST_PROXY", HOSTED)
 
 PYODIDE_INDEX_URL = os.environ.get(

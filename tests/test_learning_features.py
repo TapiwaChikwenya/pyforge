@@ -50,7 +50,7 @@ def test_onboarding_and_first_hour(client):
 
 
 def test_portfolio_and_certificate(client):
-    client.post("/api/progress/exercise", json={"exercise_id": "tf-1", "passed": True})
+    client.app.state.store.set_exercise(None, "tf-1", True)
     r = client.get("/api/portfolio")
     assert r.status_code == 200
     assert "Task Forge" in r.json()["markdown"]
@@ -72,7 +72,7 @@ def test_mentor_debrief_on_project(client):
 def test_community_solutions_gated(client):
     r = client.get("/api/solutions/tf-1")
     assert r.status_code == 403
-    client.post("/api/progress/exercise", json={"exercise_id": "tf-1", "passed": True})
+    client.app.state.store.set_exercise(None, "tf-1", True)
     r = client.get("/api/solutions/tf-1")
     assert r.status_code == 200
     assert len(r.json()["solutions"]) >= 1

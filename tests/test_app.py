@@ -173,6 +173,37 @@ def test_atomic_json_store(tmp_path):
     assert data["milestones"]["proj"] == [0]
 
 
+def test_forwarded_for_uses_the_proxy_appended_hop(monkeypatch):
+    import config
+    from ratelimit import client_ip
+
+    class Req:
+        def __init__(self, headers, host):
+            self.headers = headers
+            self.client = type("Client", (), {"host": host})()
+
+    spoofed = Req({"x-forwarded-for": "1.2.3.4, 10.1.1.8"}, "172.17.0.2")
+    monkeypatch.setattr(config, "TRUST_PROXY", True)
+    assert client_ip(spoofed) == "10.1.1.8"
+    monkeypatch.setattr(config, "TRUST_PROXY", False)
+    assert client_ip(spoofed) == "172.17.0.2"
+
+
+def test_local_progress_post_cannot_award_a_pass(local_client):
+    denied = local_client.post(
+        "/api/progress/exercise",
+        json={"exercise_id": "tf-1", "passed": True},
+    )
+    assert denied.status_code == 400
+    cleared = local_client.post(
+        "/api/progress/exercise",
+        json={"exercise_id": "tf-1", "passed": False},
+    )
+    assert cleared.status_code == 200
+    portfolio = local_client.get("/api/portfolio").json()
+    assert portfolio["stats"]["exercises_done"] == 0
+
+
 def test_rate_limiter_blocks(tmp_path):
     from ratelimit import RateLimiter
 

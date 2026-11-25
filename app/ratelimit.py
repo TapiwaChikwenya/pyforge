@@ -64,12 +64,19 @@ class RateLimiter:
 
 
 def client_ip(request) -> str:
-    """Best-effort client IP. Trust X-Forwarded-For only when configured."""
+    """Best-effort client IP.
+
+    Trust forwarding headers only when TRUST_PROXY is set, and only the hop
+    the trusted proxy appended. The leftmost X-Forwarded-For value is chosen
+    by the client, so using it lets one caller mint a fresh rate-limit bucket
+    per request. With a single reverse proxy the rightmost value is the peer
+    that proxy accepted.
+    """
     if config.TRUST_PROXY:
         xff = request.headers.get("x-forwarded-for") or ""
-        first = xff.split(",")[0].strip()
-        if first:
-            return first
+        parts = [part.strip() for part in xff.split(",") if part.strip()]
+        if parts:
+            return parts[-1]
         real = (request.headers.get("x-real-ip") or "").strip()
         if real:
             return real

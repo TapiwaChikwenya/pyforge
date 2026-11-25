@@ -14,7 +14,8 @@ API
   GET  /api/curriculum            projects + stages + progress + mode/user
   GET  /api/project/{pid}         one project with exercises and interview Q&A
   GET  /api/me                    current user (hosted)
-  POST /api/progress/exercise     record a pass (hosted: signed-in only; honor system)
+  POST /api/progress/exercise     hosted: record a browser-verified pass (honor system).
+                                  local: clear a pass only; a pass comes from /api/run
   POST /api/milestone             toggle a milestone
   POST /api/progress/merge        fold anonymous progress into an account
   POST /api/run                   LOCAL MODE ONLY — sandboxed execution
@@ -303,8 +304,13 @@ def record_exercise(req: ExerciseProgress, request: Request) -> dict[str, Any]:
         raise HTTPException(503, "no progress storage configured")
     if config.HOSTED:
         store.set_exercise(_require_user(request), req.exercise_id, req.passed)
+    elif req.passed:
+        raise HTTPException(
+            400,
+            "local mode records a pass only when /api/run checks succeed",
+        )
     else:
-        store.set_exercise(None, req.exercise_id, req.passed)
+        store.set_exercise(None, req.exercise_id, False)
     return {"ok": True}
 
 
