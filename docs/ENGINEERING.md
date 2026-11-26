@@ -56,7 +56,7 @@ flowchart LR
 
 - Hosted: no `/api/run`; progress is honor-system (see DEPLOY.md)
 - `ALLOW_ANONYMOUS=false` forces GitHub sign-in for UI/API
-- Local runner: env scrub, isolated cwd, POSIX rlimits — residual Docker-network access is intentional. `/api/run` rejects code over 200k characters, matching lint.
+- Local runner: default-deny env scrub, HOME/TMP pointed at the exercise temp dir (not the host home), isolated cwd, POSIX rlimits. Residual Docker-network access and absolute-path reads on a single-user machine are intentional. `/api/run` rejects code over 200k characters, matching lint. Do not change the scrub to default-allow.
 - OAuth `next` must be a same-origin path. `//host` and backslash forms are rewritten to `/` before the state cookie and again on callback.
 - Community solutions and the certificate for anonymous hosted learners use a POST of sanitized local progress. `GET /api/solutions/{id}?passed=1` is rejected.
 - Logout deletes the session cookie with the same `Secure` / `SameSite` flags used to set it.

@@ -36,9 +36,14 @@ _BLOCKED_ENV_PREFIXES = (
 
 
 def _scrubbed_env() -> dict[str, str]:
-    """Minimal environment: PATH/HOME/LANG + Java/Spark bits for heavy exercises."""
+    """Default-deny environment: PATH/LANG plus Java/Spark bits.
+
+    HOME, USER, and temp dirs are not copied. ``sandbox_env`` points them at
+    the exercise work directory so learner code cannot read ``~/.aws`` or
+    ``~/.ssh`` through ``expanduser``. Do not switch this to default-allow.
+    """
     keep = {
-        "PATH", "HOME", "USER", "LANG", "LC_ALL", "LC_CTYPE", "TMPDIR", "TEMP", "TMP",
+        "PATH", "LANG", "LC_ALL", "LC_CTYPE",
         "SYSTEMROOT", "COMSPEC",  # Windows
         "JAVA_HOME", "JDK_HOME", "PYSPARK_PYTHON", "PYSPARK_DRIVER_PYTHON",
         "SPARK_HOME", "HADOOP_HOME",
@@ -54,6 +59,18 @@ def _scrubbed_env() -> dict[str, str]:
     env.setdefault("PYTHONNOUSERSITE", "1")
     # Discourage accidental network use of credential helpers; does not block sockets.
     env["GIT_TERMINAL_PROMPT"] = "0"
+    return env
+
+
+def sandbox_env(work_dir: str) -> dict[str, str]:
+    """Scrubbed env whose home and temp directories are the work directory."""
+    env = _scrubbed_env()
+    env["HOME"] = work_dir
+    env["USERPROFILE"] = work_dir
+    env["TMPDIR"] = work_dir
+    env["TEMP"] = work_dir
+    env["TMP"] = work_dir
+    env["USER"] = "learner"
     return env
 
 
@@ -100,7 +117,7 @@ def run_exercise(user_code: str, check_code: str, heavy: bool = False) -> dict:
             "text": True,
             "timeout": timeout,
             "cwd": tmp,
-            "env": _scrubbed_env(),
+            "env": sandbox_env(tmp),
         }
         # preexec_fn is POSIX-only (unsupported on Windows).
         if os.name == "posix":
