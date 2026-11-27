@@ -5,6 +5,7 @@
 
 # local state
 app/data/progress.json
+app/data/analytics.json
 app/data/*.sqlite3
 app/data/.progress-*.tmp
 workspace/data/*

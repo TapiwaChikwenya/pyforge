@@ -56,6 +56,7 @@ flowchart TD
 | Case | Behaviour |
 |------|-----------|
 | Solutions before pass | HTTP 403 |
+| Failed re-run after a pass | Checkmark stays. The result panel still shows the error. A pass is recorded only from a successful local `/api/run` or, on hosted, from the browser honor system. |
 | Empty analytics | Friction table shows empty state |
 | Anonymous hosted portfolio | POST `/api/portfolio` with localStorage progress |
 

@@ -837,12 +837,7 @@ async function runExercise(id, heavy) {
     } else {
       res.className = 'result err';
       res.textContent = ((out.output ? out.output + '\n' : '') + (out.error || 'Failed')).trim();
-      if (current.exercises_passed && current.exercises_passed[id]) {
-        current.exercises_passed[id] = false;
-        const card = document.getElementById('ex-' + id);
-        if (card) card.classList.remove('passed');
-        await recordExercise(id, false);
-      }
+      // Keep a checkmark earned earlier. The error above is this attempt.
       if (F) {
         F.ReviewState.bumpFail(id);
         F.track('exercise_fail', { exercise_id: id, project_id: current.project.id });
