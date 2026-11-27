@@ -503,7 +503,12 @@ if not config.HOSTED:
         result = run_exercise(
             req.code, exercise["check_code"], heavy=exercise.get("heavy", False)
         )
-        request.app.state.store.set_exercise(None, req.exercise_id, bool(result["passed"]))
+        # A later failed experiment must not erase a pass. Courses keep the
+        # checkmark so learners can try a variation. This response still
+        # reports passed=false for the attempt they just ran.
+        store = request.app.state.store
+        if result["passed"] and store is not None:
+            store.set_exercise(None, req.exercise_id, True)
         return result
 
     @app.post("/api/scratch")

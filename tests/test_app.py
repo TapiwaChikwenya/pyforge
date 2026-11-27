@@ -93,6 +93,49 @@ def test_run_endpoint_local(local_client):
     assert "passed" in r.json()
 
 
+def test_failed_rerun_keeps_a_recorded_pass(local_client, monkeypatch):
+    import main as main_mod
+
+    def failed_run(user_code, check_code, heavy=False):
+        return {"passed": False, "output": "", "error": "nope", "timed_out": False}
+
+    monkeypatch.setattr(main_mod, "run_exercise", failed_run)
+    cur = local_client.get("/api/curriculum").json()
+    pid = cur["projects"][0]["id"]
+    detail = local_client.get(f"/api/project/{pid}").json()
+    exercise_id = detail["project"]["exercises"][0]["id"]
+    main_mod.app.state.store.set_exercise(None, exercise_id, True)
+    response = local_client.post(
+        "/api/run",
+        json={"project_id": pid, "exercise_id": exercise_id, "code": "x = 1"},
+    )
+    assert response.status_code == 200
+    assert response.json()["passed"] is False
+    progress = local_client.get("/api/progress").json()
+    assert progress["exercises"].get(exercise_id) is True
+
+
+def test_passing_run_records_the_exercise(local_client, monkeypatch):
+    import main as main_mod
+
+    def passed_run(user_code, check_code, heavy=False):
+        return {"passed": True, "output": "ok", "error": "", "timed_out": False}
+
+    monkeypatch.setattr(main_mod, "run_exercise", passed_run)
+    cur = local_client.get("/api/curriculum").json()
+    pid = cur["projects"][0]["id"]
+    detail = local_client.get(f"/api/project/{pid}").json()
+    exercise_id = detail["project"]["exercises"][0]["id"]
+    response = local_client.post(
+        "/api/run",
+        json={"project_id": pid, "exercise_id": exercise_id, "code": "x = 1"},
+    )
+    assert response.status_code == 200
+    assert response.json()["passed"] is True
+    progress = local_client.get("/api/progress").json()
+    assert progress["exercises"].get(exercise_id) is True
+
+
 def test_run_rejects_oversized_submission(local_client):
     cur = local_client.get("/api/curriculum").json()
     pid = cur["projects"][0]["id"]
