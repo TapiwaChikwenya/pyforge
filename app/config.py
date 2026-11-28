@@ -62,7 +62,7 @@ RATE_LIMIT_DB = os.environ.get("RATE_LIMIT_DB", "")
 TRUST_PROXY = _bool("TRUST_PROXY", HOSTED)
 
 PYODIDE_INDEX_URL = os.environ.get(
-    "PYODIDE_INDEX_URL", "https://cdn.jsdelivr.net/pyodide/v0.28.3/full/"
+    "PYODIDE_INDEX_URL", "https://cdn.jsdelivr.net/pyodide/v314.0.3/full/"
 )
 
 # Curriculum list responses are identical for anonymous users; cache briefly.

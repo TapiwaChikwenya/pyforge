@@ -14,6 +14,10 @@ meaningful).
 Harness: `tests/pyodide/harness.html` + `tests/pyodide/run_compat.py` (kept out
 of the shipped app; see `tests/pyodide/README.md` to re-verify).
 
+The hosted default `PYODIDE_INDEX_URL` is the jsDelivr build of that same
+314.0.3 release. Pyodide 314.0.8 (13 Nov 2026) is the current stable CDN pin
+and was not re-run here, so it is not the default.
+
 ## Results
 
 | Outcome | Count | Exercises |

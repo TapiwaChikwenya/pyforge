@@ -112,7 +112,7 @@ variable "allow_anonymous" {
 variable "pyodide_index_url" {
   description = "Where browsers load the Python runtime from. Must be a FULL Pyodide distribution."
   type        = string
-  default     = "https://cdn.jsdelivr.net/pyodide/v0.28.3/full/"
+  default     = "https://cdn.jsdelivr.net/pyodide/v314.0.3/full/"
 }
 
 # --- access -----------------------------------------------------------------

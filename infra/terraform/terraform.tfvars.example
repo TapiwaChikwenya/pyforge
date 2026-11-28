@@ -69,5 +69,5 @@ budget_alert_email = "YOUR-EMAIL@gmail.com"
 
 
 # --- 8. Advanced -------------------------------------------------------------
-# pyodide_index_url = "https://cdn.jsdelivr.net/pyodide/v0.28.3/full/"
+# pyodide_index_url = "https://cdn.jsdelivr.net/pyodide/v314.0.3/full/"
 # environment = "prod"
