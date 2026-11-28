@@ -181,8 +181,9 @@ Expect ~200 MB on disk for the full set of wheels; browsers only download what
 each exercise imports.
 
 To pin a different Pyodide version, change `PYODIDE_INDEX_URL` — no code
-changes. Verified against Pyodide 0.28.x / Python 3.14 (see
-`tests/PYODIDE_COMPAT.md`).
+changes. The default is Pyodide 314.0.3 / Python 3.14, the build the exercise
+harness ran (see `tests/PYODIDE_COMPAT.md`). 314.0.8 (13 Nov 2026) is newer
+and was not re-run through that harness, so it is not the default.
 
 ---
 

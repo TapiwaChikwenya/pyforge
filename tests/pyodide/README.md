@@ -25,4 +25,4 @@ python3 run_compat.py            # add an exercise id to test just one
 The npm package ships the runtime but **not** the package wheels, so
 numpy/pandas/pydantic/fastapi/duckdb exercises will report "not installed"
 unless you point `indexURL` in `harness.html` at a full distribution
-(`https://cdn.jsdelivr.net/pyodide/v0.28.3/full/`) or extract one locally.
+(`https://cdn.jsdelivr.net/pyodide/v314.0.3/full/`) or extract one locally.
